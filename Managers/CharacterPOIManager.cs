@@ -1,15 +1,132 @@
 ﻿using Duckov.MiniMaps;
 using Duckov.Scenes;
+using MiniMap.Extentions;
+using Newtonsoft.Json.Linq;
 using SodaCraft.Localizations;
 using UnityEngine;
 
 namespace MiniMap.Managers
 {
-    public static class CharacterCommon
+    public static class CharacterPoiCommon
     {
+        private static Sprite? GetIcon(JObject? config, string presetName, out float scale, out bool isBoss)
+        {
+            if (config == null)
+            {
+                scale = 0.5f;
+                isBoss = false;
+                return null;
+            }
+            float defaultScale = config.Value<float?>("defaultScale") ?? 1f;
+            string? defaultIconName = config.Value<string?>("defaultIcon");
+            foreach (KeyValuePair<string, JToken?> item in config)
+            {
+                if (item.Value is not JObject jObject) { continue; }
+                if (jObject.ContainsKey(presetName))
+                {
+                    string? iconName = jObject.Value<string?>(presetName);
+                    if (string.IsNullOrEmpty(iconName))
+                    {
+                        iconName = jObject.Value<string?>("defaultIcon");
+                    }
+                    if (string.IsNullOrEmpty(iconName))
+                    {
+                        iconName = defaultIconName;
+                    }
+                    scale = jObject.Value<float?>("scale") ?? defaultScale;
+                    isBoss = item.Key.ToLower() == "boss";
+                    return Util.LoadSprite(iconName);
+                }
+            }
+            scale = defaultScale;
+            isBoss = false;
+            return Util.LoadSprite(defaultIconName);
+        }
+
+        public static void CreatePoiIfNeeded(CharacterMainControl character, out IPointOfInterest? characterPoi, out IPointOfInterest? directionPoi)
+        {
+            if (!LevelManager.LevelInited)
+            {
+                characterPoi = null;
+                directionPoi = null;
+                return;
+            }
+
+            GameObject poiObject = character.gameObject;
+            if (poiObject == null)
+            {
+                characterPoi = null;
+                directionPoi = null;
+                return;
+            }
+            if (character.transform.parent?.name == "Level_Factory_Main")
+            {
+                if (poiObject != null)
+                {
+                    GameObject.Destroy(poiObject);
+                }
+                characterPoi = null;
+                directionPoi = null;
+                return;
+            }
+            float scaleFactor = 1;
+            directionPoi = poiObject.GetComponent<DirectionPointOfInterest>();
+            characterPoi = poiObject.GetComponent<SimplePointOfInterest>();
+            characterPoi ??= poiObject.GetComponent<CharacterPointOfInterest>();
+            if (characterPoi == null)
+            {
+                CharacterRandomPreset? preset = character.characterPreset;
+                if (preset == null)
+                {
+                    return;
+                }
+                characterPoi = poiObject.AddComponent<CharacterPointOfInterest>();
+                CharacterPointOfInterest pointOfInterest = (CharacterPointOfInterest)characterPoi;
+                ModBehaviour.Instance?.ExecuteWithDebounce(() =>
+                {
+                    Debug.Log($"[MiniMap] Setting Up characterPoi for {(character.IsMainCharacter ? "Main Character" : preset.DisplayName)}");
+                    JObject? iconConfig = Util.LoadConfig("iconConfig.json");
+                    Sprite? icon = GetIcon(iconConfig, preset.name, out scaleFactor, out bool isBoss);
+                    pointOfInterest.Setup(icon, character, displayName: preset.nameKey, followActiveScene: true);
+                    pointOfInterest.ScaleFactor = scaleFactor;
+                }, () =>
+                {
+                    Debug.Log("[MiniMap] Handling Points Of Interests");
+                    CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
+                });
+            }
+            if (directionPoi == null)
+            {
+                CharacterRandomPreset? preset = character.characterPreset;
+                if (preset == null && !character.IsMainCharacter)
+                {
+                    return;
+                }
+                directionPoi = poiObject.AddComponent<DirectionPointOfInterest>();
+                DirectionPointOfInterest pointOfInterest = (DirectionPointOfInterest)directionPoi;
+                ModBehaviour.Instance?.ExecuteWithDebounce(() =>
+                {
+                    Debug.Log($"[MiniMap] Setting Up directionPoi for {(character.IsMainCharacter ? "Main Character" : preset?.DisplayName)}");
+                    Sprite? icon = Util.LoadSprite("CharactorDirection.png");
+                    pointOfInterest.BaseEulerAngle = 45f;
+                    pointOfInterest.Setup(icon, character: character, tagName: preset?.DisplayName, followActiveScene: true);
+                    pointOfInterest.ScaleFactor = scaleFactor;
+                }, () =>
+                {
+                    Debug.Log("[MiniMap] Handling Points Of Interests");
+                    CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
+                });
+            }
+        }
+
         public static bool IsDead(CharacterMainControl? character)
         {
             return !(character != null && character.Health && !character.Health.IsDead);
+        }
+
+        public static void OnFinishedLoadingScene(SceneLoadingContext obj)
+        {
+            Debug.Log($"[MiniMap] Finished Loading Scene: {obj.sceneName}");
         }
     }
 
@@ -81,13 +198,14 @@ namespace MiniMap.Managers
 
         private void Update()
         {
-            if (CharacterCommon.IsDead(character))
+            if (CharacterPoiCommon.IsDead(character))
             {
                 Destroy(this.gameObject);
                 return;
             }
         }
     }
+
     public class DirectionPointOfInterest : MonoBehaviour, IPointOfInterest
     {
         private Sprite? icon;
@@ -161,7 +279,7 @@ namespace MiniMap.Managers
 
         private void Update()
         {
-            if (CharacterCommon.IsDead(character))
+            if (CharacterPoiCommon.IsDead(character))
             {
                 Destroy(this.gameObject);
                 return;

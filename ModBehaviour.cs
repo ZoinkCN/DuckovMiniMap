@@ -100,6 +100,7 @@ namespace MiniMap
                 ApplyHarmonyExtenders();
                 ModManager.OnModActivated += ModManager_OnModActivated;
                 LevelManager.OnEvacuated += OnEvacuated;
+                SceneLoader.onFinishedLoadingScene += CharacterPoiCommon.OnFinishedLoadingScene;
             }
             catch (Exception e)
             {
@@ -118,6 +119,8 @@ namespace MiniMap
             {
                 CancelHarmonyExtender();
                 ModManager.OnModActivated -= ModManager_OnModActivated;
+                LevelManager.OnEvacuated -= OnEvacuated;
+                SceneLoader.onFinishedLoadingScene -= CharacterPoiCommon.OnFinishedLoadingScene;
                 CustomMinimapManager.Destroy();
                 Debug.Log($"[MiniMap] disable mod {MOD_NAME}");
             }

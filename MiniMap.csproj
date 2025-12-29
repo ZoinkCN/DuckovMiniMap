@@ -30,9 +30,6 @@
     <!-- 引用非系统 DLL -->
     <Reference Include="@(AllDlls)" Exclude="@(SystemDlls)" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="EmbeddedResource\" />
-  </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Copy SourceFiles="bin\Release\netstandard2.1\MiniMap.dll" DestinationFiles="$(DuckovPath)\Mods\MiniMap\MiniMap.dll" />
     <Copy SourceFiles="bin\Release\netstandard2.1\Newtonsoft.Json.dll" DestinationFiles="$(DuckovPath)\Mods\MiniMap\Newtonsoft.Json.dll" />
