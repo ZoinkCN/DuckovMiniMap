@@ -2,9 +2,9 @@
 using System.Reflection;
 using UnityEngine;
 
-namespace ZoinkModdingLibrary.Utils
+namespace ZoinkModdingLibrary.Patcher
 {
-    public static class AssemblyControl
+    public static class AssemblyOption
     {
         public static Type? FindTypeInAssemblies(string assembliyName, string typeName, ModLogger? logger = null)
         {

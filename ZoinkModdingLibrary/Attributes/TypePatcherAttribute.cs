@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using ZoinkModdingLibrary.Utils;
+using ZoinkModdingLibrary.Patcher;
 
 namespace ZoinkModdingLibrary.Attributes
 {
@@ -21,7 +21,7 @@ namespace ZoinkModdingLibrary.Attributes
         {
             this.targetAssemblyName = targetAssemblyName;
             this.targetTypeName = targetTypeName;
-            targetType = AssemblyControl.FindTypeInAssemblies(targetAssemblyName, targetTypeName);
+            targetType = AssemblyOption.FindTypeInAssemblies(targetAssemblyName, targetTypeName);
         }
 
         public TypePatcherAttribute(Type targetType)

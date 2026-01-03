@@ -5,7 +5,6 @@ using Duckov.Modding;
 using MiniMap.Patchers;
 using MiniMap.Managers;
 using MiniMap.Utils;
-using ZoinkModdingLibrary.Utils;
 using ZoinkModdingLibrary.Patcher;
 using ZoinkModdingLibrary;
 
@@ -62,26 +61,9 @@ namespace MiniMap
             }
         }
 
-        //public bool PatchSingleExtender(string assembliyName, string targetTypeName, Type extenderType, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
-        //{
-        //    Type? targetType = AssemblyControl.FindTypeInAssemblies(assembliyName, targetTypeName);
-        //    if (targetType == null)
-        //    {
-        //        Debug.LogWarning($"[{MOD_NAME}] Target Type \"{targetTypeName}\" Not Found!");
-        //        return false;
-        //    }
-        //    return PatchSingleExtender(targetType, extenderType, methodName, bindFlags);
-        //}
-
-        //public void UnpatchSingleExtender(Type targetType, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
-        //{
-        //    MethodInfo originMethod = targetType.GetMethod(methodName, bindFlags);
-        //    Harmony.Unpatch(originMethod, HarmonyPatchType.All, MOD_ID);
-        //}
-
         public bool UnpatchSingleExtender(string assembliyName, string targetTypeName, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
         {
-            Type? targetType = AssemblyControl.FindTypeInAssemblies(assembliyName, targetTypeName);
+            Type? targetType = AssemblyOption.FindTypeInAssemblies(assembliyName, targetTypeName);
             if (targetType == null)
             {
                 Debug.LogWarning($"[{MOD_NAME}] Target Type \"{targetTypeName}\" Not Found!");

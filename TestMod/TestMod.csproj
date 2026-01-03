@@ -14,9 +14,6 @@
     <Reference Include="$(ManagedPath)\TeamSoda.*" />
     <Reference Include="$(ManagedPath)\Cinemachine.dll" />
     <Reference Include="$(ManagedPath)\ItemStatsSystem.dll" />
-    <Reference Include="0Harmony">
-      <HintPath>libs\0Harmony.dll</HintPath>
-    </Reference>
     <Reference Include="$(ManagedPath)\Unity*" />
     <ModFiles Include="ModFiles\**\*" />
 
@@ -25,10 +22,17 @@
 
     <!-- 定义要排除的系统 DLL -->
     <SystemDlls Include="$(ManagedPath)\mscorlib.dll;&#xA;                      $(ManagedPath)\System.dll;&#xA;                      $(ManagedPath)\System.*.dll;&#xA;                      $(ManagedPath)\Microsoft.*.dll;&#xA;                      $(ManagedPath)\netstandard.dll;&#xA;                      $(ManagedPath)\WindowsBase.dll" />
+    <Compile Remove="Pathcers\**" />
+    <EmbeddedResource Remove="Pathcers\**" />
+    <None Remove="Pathcers\**" />
     <ProjectReference Include="..\ZoinkModdingLibrary\ZoinkModdingLibrary.csproj" />
 
     <!-- 引用非系统 DLL -->
     <Reference Include="@(AllDlls)" Exclude="@(SystemDlls)" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ModFiles\FolderToUpload\" />
+    <Folder Include="ModFiles\FolderToIgnore\" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Copy SourceFiles="$(OutputPath)\$(AssemblyName).dll" DestinationFiles="$(CopyPath)\$(AssemblyName).dll" />

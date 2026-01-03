@@ -17,7 +17,7 @@ namespace ZoinkModdingLibrary.Patcher
 
         private Type? targetType = null;
         private bool isPatched = false;
-        private Dictionary<string, PatchEntry> queue = new Dictionary<string, PatchEntry>();
+        private Dictionary<string, PatchEntry>? queue;
 
         public virtual bool IsPatched => isPatched;
 
@@ -28,6 +28,7 @@ namespace ZoinkModdingLibrary.Patcher
             {
                 if (isPatched)
                 {
+                    logger.LogWarning("Already Patched");
                     return true;
                 }
                 TypePatcherAttribute typePatcher = GetType().GetCustomAttribute<TypePatcherAttribute>();
@@ -45,51 +46,56 @@ namespace ZoinkModdingLibrary.Patcher
                 logger.Log($"Patching {targetType.Name}");
                 IEnumerable<MethodInfo> patchMethods = GetType().GetMethods().Where(s => s.HasAttribute<MethodPatcherAttribute>());
                 logger.Log($"Find {patchMethods.Count()} Methods to patch");
-                foreach (MethodInfo method in patchMethods)
+                if (queue == null)
                 {
-                    MethodPatcherAttribute? methodPatcher = method.GetCustomAttribute<MethodPatcherAttribute>();
-                    if (methodPatcher == null)
+                    queue = new Dictionary<string, PatchEntry>();
+                    foreach (MethodInfo method in patchMethods)
                     {
-                        continue;
-                    }
-                    string targetMethod = methodPatcher.MethodName;
-                    PatchType patchType = methodPatcher.PatchType;
-                    MethodInfo? originalMethod = targetType.GetMethod(targetMethod, methodPatcher.BindingFlags);
-                    if (originalMethod == null)
-                    {
-                        Debug.LogWarning($"Target Method \"{targetType.Name}.{targetMethod}\" Not Found!");
-                        continue;
-                    }
-                    logger.Log($"Patching {targetType.Name}.{originalMethod.Name}");
-                    PatchEntry entry;
-                    if (queue.ContainsKey(originalMethod.ToString()))
-                    {
-                        entry = queue[originalMethod.ToString()];
-                    }
-                    else
-                    {
-                        entry = new PatchEntry(originalMethod, logger);
-                        queue.Add(originalMethod.ToString(), entry);
-                    }
-                    switch (patchType)
-                    {
-                        case PatchType.Prefix:
-                            entry.prefix = new HarmonyMethod(method);
-                            break;
-                        case PatchType.Postfix:
-                            entry.postfix = new HarmonyMethod(method);
-                            break;
-                        case PatchType.Transpiler:
-                            entry.transpiler = new HarmonyMethod(method);
-                            break;
-                        case PatchType.Finalizer:
-                            entry.finalizer = new HarmonyMethod(method);
-                            break;
-                        default:
-                            Debug.LogWarning($"Unknown Patch Type \"{patchType}\".");
-                            break;
+                        MethodPatcherAttribute? methodPatcher = method.GetCustomAttribute<MethodPatcherAttribute>();
+                        if (methodPatcher == null)
+                        {
+                            continue;
+                        }
+                        string targetMethod = methodPatcher.MethodName;
+                        PatchType patchType = methodPatcher.PatchType;
+                        MethodInfo? originalMethod = targetType.GetMethod(targetMethod, methodPatcher.BindingFlags);
+                        if (originalMethod == null)
+                        {
+                            Debug.LogWarning($"Target Method \"{targetType.Name}.{targetMethod}\" Not Found!");
+                            continue;
+                        }
+                        logger.Log($"Patching {targetType.Name}.{originalMethod.Name}");
+                        PatchEntry entry;
+                        if (queue.ContainsKey(originalMethod.ToString()))
+                        {
+                            entry = queue[originalMethod.ToString()];
+                        }
+                        else
+                        {
+                            entry = new PatchEntry(originalMethod, logger);
+                            queue.Add(originalMethod.ToString(), entry);
+                        }
+                        switch (patchType)
+                        {
+                            case PatchType.Prefix:
+                                entry.prefix = new HarmonyMethod(method);
+                                break;
+                            case PatchType.Postfix:
+                                entry.postfix = new HarmonyMethod(method);
+                                break;
+                            case PatchType.Transpiler:
+                                entry.transpiler = new HarmonyMethod(method);
+                                break;
+                            case PatchType.Finalizer:
+                                entry.finalizer = new HarmonyMethod(method);
+                                break;
+                            default:
+                                Debug.LogWarning($"Unknown Patch Type \"{patchType}\".");
+                                break;
+                        }
                     }
                 }
+
                 foreach (KeyValuePair<string, PatchEntry> item in queue)
                 {
                     item.Value.Patch(harmony);
@@ -108,13 +114,14 @@ namespace ZoinkModdingLibrary.Patcher
         public virtual void Unpatch(Harmony? harmony, ModLogger? logger = null)
         {
             logger ??= ModLogger.DefultLogger;
-            if (isPatched)
+            if (isPatched && queue != null)
             {
                 foreach (KeyValuePair<string, PatchEntry> item in queue)
                 {
                     item.Value.Unpatch(harmony);
                     logger.Log($"{item.Key} Unpatched");
                 }
+                isPatched = false;
             }
         }
     }

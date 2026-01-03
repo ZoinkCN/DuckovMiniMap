@@ -3,6 +3,7 @@ using MiniMap.Utils;
 using Newtonsoft.Json.Linq;
 using SodaCraft.Localizations;
 using UnityEngine;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Managers
 {
@@ -28,7 +29,7 @@ namespace MiniMap.Managers
             {
                 if (modSettings == null)
                 {
-                    modSettings = ModConfig.LoadConfig(ModConfigFileName);
+                    modSettings = ModFileOperations.LoadJson(ModConfigFileName, ModBehaviour.Logger);
                     if (modSettings == null)
                     {
                         modSettings = new JObject();
@@ -44,11 +45,11 @@ namespace MiniMap.Managers
             {
                 if (modSettingsTemplates == null)
                 {
-                    modSettingsTemplates = ModConfig.LoadConfig(ModConfigTemplateFileName);
+                    modSettingsTemplates = ModFileOperations.LoadJson(ModConfigTemplateFileName, ModBehaviour.Logger);
                     if (modSettingsTemplates == null)
                     {
                         ModBehaviour.Logger.LogError($"加载Mod配置模板失败，请确保template文件夹下存在modConfigTemplate.json文件");
-                        throw new System.Exception("Failed loading template. Please make sure the file \"modConfigTemplate.json\" is in \"template\" folder.");
+                        throw new Exception("Failed loading template. Please make sure the file \"modConfigTemplate.json\" is in \"template\" folder.");
                     }
                 }
                 return modSettingsTemplates;
@@ -72,7 +73,7 @@ namespace MiniMap.Managers
             }
             if (save)
             {
-                ModConfig.SaveConfig(ModConfigFileName, ModSettings);
+                ModFileOperations.SaveJson(ModConfigFileName, ModSettings, ModBehaviour.Logger);
             }
         }
 
@@ -108,7 +109,7 @@ namespace MiniMap.Managers
 
             LoadDefultNoUISettings();
 
-            ModConfig.SaveConfig(ModConfigFileName, modSettings);
+            ModFileOperations.SaveJson(ModConfigFileName, modSettings, ModBehaviour.Logger);
         }
 
         private static void SetUI(KeyValuePair<string, JToken?> config)
@@ -362,7 +363,7 @@ namespace MiniMap.Managers
             if (ModSettings.ContainsKey(key) || create)
             {
                 ModSettings[key] = JToken.FromObject(value);
-                ModConfig.SaveConfig(ModConfigFileName, ModSettings);
+                ModFileOperations.SaveJson(ModConfigFileName, ModSettings, ModBehaviour.Logger);
             }
         }
 

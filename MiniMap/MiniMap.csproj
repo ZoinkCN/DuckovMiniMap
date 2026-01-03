@@ -47,7 +47,7 @@
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Copy SourceFiles="$(OutputPath)\$(AssemblyName).dll" DestinationFiles="$(CopyPath)\$(AssemblyName).dll" />
-    <Copy SourceFiles="$(OutputPath)\Newtonsoft.Json.dll" DestinationFiles="$(CopyPath)\Newtonsoft.Json.dll" />
+    <!--<Copy SourceFiles="$(OutputPath)\Newtonsoft.Json.dll" DestinationFiles="$(CopyPath)\Newtonsoft.Json.dll" />-->
     <Copy SourceFiles="$(OutputPath)\ZoinkModdingLibrary.dll" DestinationFiles="$(CopyPath)\ZoinkModdingLibrary.dll" />
     <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(CopyPath)\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(ResourceFiles)" DestinationFolder="$(CopyPath)\%(RecursiveDir)" SkipUnchangedFiles="true" />

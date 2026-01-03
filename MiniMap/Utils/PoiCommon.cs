@@ -4,6 +4,7 @@ using MiniMap.Managers;
 using MiniMap.Poi;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Utils
 {
@@ -35,12 +36,12 @@ namespace MiniMap.Utils
                     }
                     scale = jObject.Value<float?>("scale") ?? defaultScale;
                     isBoss = item.Key.ToLower() == "boss";
-                    return ModConfig.LoadSprite(iconName);
+                    return ModFileOperations.LoadSprite(iconName);
                 }
             }
             scale = defaultScale;
             isBoss = false;
-            return ModConfig.LoadSprite(defaultIconName);
+            return ModFileOperations.LoadSprite(defaultIconName);
         }
 
         public static void CreatePoiIfNeeded(CharacterMainControl character, out IPointOfInterest? characterPoi, out IPointOfInterest? directionPoi)
@@ -85,7 +86,7 @@ namespace MiniMap.Utils
                 ModBehaviour.Instance?.ExecuteWithDebounce(() =>
                 {
                     ModBehaviour.Logger.Log($"Setting Up characterPoi for {(character.IsMainCharacter ? "Main Character" : preset.DisplayName)}");
-                    JObject? iconConfig = ModConfig.LoadConfig("iconConfig.json");
+                    JObject? iconConfig = ModFileOperations.LoadJson("iconConfig.json", ModBehaviour.Logger);
                     Sprite? icon = GetIcon(iconConfig, preset.name, out scaleFactor, out bool isBoss);
                     pointOfInterest.Setup(icon, character, cachedName: preset.nameKey, followActiveScene: true);
                     pointOfInterest.ScaleFactor = scaleFactor;
@@ -107,7 +108,7 @@ namespace MiniMap.Utils
                 ModBehaviour.Instance?.ExecuteWithDebounce(() =>
                 {
                     ModBehaviour.Logger.Log($"Setting Up directionPoi for {(character.IsMainCharacter ? "Main Character" : preset?.DisplayName)}");
-                    Sprite? icon = ModConfig.LoadSprite("CharactorDirection.png");
+                    Sprite? icon = ModFileOperations.LoadSprite("CharactorDirection.png");
                     pointOfInterest.BaseEulerAngle = 45f;
                     pointOfInterest.Setup(icon, character: character, cachedName: preset?.DisplayName, followActiveScene: true);
                     pointOfInterest.ScaleFactor = scaleFactor;

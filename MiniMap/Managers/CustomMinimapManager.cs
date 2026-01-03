@@ -6,6 +6,8 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using ZoinkModdingLibrary.GameUI;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Managers
 {
@@ -519,34 +521,34 @@ namespace MiniMap.Managers
                 miniMapRect.anchoredPosition = Vector2.zero;
 
                 // 创建遮罩区域
-                CreateFilledRectTransform(miniMapRect, "Zoink_MiniMapMask", out GameObject? maskObject, out RectTransform? miniMapMaskRect);
+                UIElements.CreateFilledRectTransform(miniMapRect, "Zoink_MiniMapMask", out GameObject? maskObject, out RectTransform? miniMapMaskRect);
                 if (maskObject == null || miniMapMaskRect == null)
                 {
                     return;
                 }
                 Image image = maskObject.AddComponent<Image>();
-                image.sprite = ModConfig.LoadSprite("MiniMapMask.png");
+                image.sprite = ModFileOperations.LoadSprite("MiniMapMask.png");
                 Mask mask = maskObject.AddComponent<Mask>();
                 mask.showMaskGraphic = false;
 
                 // 创建边框区域
-                CreateFilledRectTransform(miniMapRect, "Zoink_MiniMapBorder", out GameObject? borderObject, out RectTransform? miniMapBorderRect);
+                UIElements.CreateFilledRectTransform(miniMapRect, "Zoink_MiniMapBorder", out GameObject? borderObject, out RectTransform? miniMapBorderRect);
                 if (borderObject == null || miniMapBorderRect == null)
                 {
                     return;
                 }
                 Image border = borderObject.AddComponent<Image>();
-                border.sprite = ModConfig.LoadSprite("MiniMapBorder.png");
+                border.sprite = ModFileOperations.LoadSprite("MiniMapBorder.png");
                 miniMapBorderRect.eulerAngles = new Vector3(0f, 0f, MapBorderEulerZRotation);
 
                 // 创建指北针区域
-                CreateFilledRectTransform(miniMapRect, "Zoink_MiniMapNorth", out GameObject? northObject, out miniMapNorthRect);
+                UIElements.CreateFilledRectTransform(miniMapRect, "Zoink_MiniMapNorth", out GameObject? northObject, out miniMapNorthRect);
                 if (northObject == null || miniMapNorthRect == null)
                 {
                     return;
                 }
                 Image north = northObject.AddComponent<Image>();
-                north.sprite = ModConfig.LoadSprite("MiniMapNorth.png");
+                north.sprite = ModFileOperations.LoadSprite("MiniMapNorth.png");
 
                 // 创建视窗区域
                 GameObject viewportObject = new GameObject("Zoink_MiniMapViewport");
@@ -577,36 +579,6 @@ namespace MiniMap.Managers
                 ModBehaviour.Logger.LogError($"Error creating minimap container: {e.Message}");
             }
         }
-        private static bool CreateFilledRectTransform(Transform parent, string objectName, out GameObject? gameObject, out RectTransform? rectTransform)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(objectName))
-                {
-                    objectName = "Zoink_NewGameObject";
-                }
-                if (!objectName.StartsWith("Zoink_"))
-                {
-                    objectName = "Zoink_" + objectName;
-                }
-                gameObject = new GameObject(objectName);
-                rectTransform = gameObject.AddComponent<RectTransform>();
-
-                rectTransform.SetParent(parent);
-                rectTransform.anchorMin = Vector2.zero;
-                rectTransform.anchorMax = Vector2.one;
-                rectTransform.offsetMin = Vector2.zero;
-                rectTransform.offsetMax = Vector2.zero;
-                return true;
-            }
-            catch (Exception)
-            {
-                gameObject = null;
-                rectTransform = null;
-                return false;
-            }
-        }
-
         public static MiniMapDisplay? GetOriginalDisplay()
         {
             try
