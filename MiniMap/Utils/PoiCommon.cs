@@ -10,12 +10,12 @@ namespace MiniMap.Utils
 {
     public static class PoiCommon
     {
-        private static Sprite? GetIcon(JObject? config, string presetName, out float scale, out bool isBoss)
+        private static Sprite? GetIcon(JObject? config, string presetName, out float scale, out CharacterType characterType)
         {
             if (config == null)
             {
                 scale = 0.5f;
-                isBoss = false;
+                characterType = CharacterType.Enemy;
                 return null;
             }
             float defaultScale = config.Value<float?>("defaultScale") ?? 1f;
@@ -35,18 +35,31 @@ namespace MiniMap.Utils
                         iconName = defaultIconName;
                     }
                     scale = jObject.Value<float?>("scale") ?? defaultScale;
-                    isBoss = item.Key.ToLower() == "boss";
+                    if(presetName == "PetPreset_NormalPet")
+                    {
+                        characterType = CharacterType.Pet;
+                    }
+                    else
+                    {
+                        characterType = item.Key switch
+                        {
+                            "friendly" => CharacterType.NPC,
+                            "neutral" => CharacterType.Neutral,
+                            "boss" => CharacterType.Boss,
+                            _ => CharacterType.Enemy,
+                        };
+                    }
                     return ModFileOperations.LoadSprite(iconName);
                 }
             }
             scale = defaultScale;
-            isBoss = false;
+            characterType = CharacterType.Enemy;
             return ModFileOperations.LoadSprite(defaultIconName);
         }
 
-        public static void CreatePoiIfNeeded(CharacterMainControl character, out IPointOfInterest? characterPoi, out IPointOfInterest? directionPoi)
+        public static void CreatePoiIfNeeded(CharacterMainControl? character, out IPointOfInterest? characterPoi, out IPointOfInterest? directionPoi, PoiShows? poiShows = null)
         {
-            if (!LevelManager.LevelInited)
+            if (!LevelManager.LevelInited || character == null)
             {
                 characterPoi = null;
                 directionPoi = null;
@@ -74,10 +87,7 @@ namespace MiniMap.Utils
             directionPoi = poiObject.GetComponent<DirectionPointOfInterest>();
             characterPoi = poiObject.GetComponent<SimplePointOfInterest>();
             characterPoi ??= poiObject.GetComponent<CharacterPointOfInterest>();
-            bool showOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
-            bool showPetPoi = ModSettingManager.GetValue("showPetPoi", true);
-            bool showInMap = ModSettingManager.GetValue("showPoiInMap", true);
-            bool showInMiniMap = ModSettingManager.GetValue("showPoiInMiniMap", true);
+            CharacterType characterType;
             if (characterPoi == null)
             {
                 CharacterRandomPreset? preset = character.characterPreset;
@@ -89,8 +99,8 @@ namespace MiniMap.Utils
                 CharacterPointOfInterest pointOfInterest = (CharacterPointOfInterest)characterPoi;
                 ModBehaviour.Logger.Log($"Setting Up characterPoi for {(character.IsMainCharacter ? "Main Character" : preset.DisplayName)}");
                 JObject? iconConfig = ModFileOperations.LoadJson("iconConfig.json", ModBehaviour.Logger);
-                Sprite? icon = GetIcon(iconConfig, preset.name, out scaleFactor, out bool isBoss);
-                pointOfInterest.Setup(icon, character, showOnlyActivated, showInMap, showInMiniMap, showPetPoi, cachedName: preset.nameKey, followActiveScene: true);
+                Sprite? icon = GetIcon(iconConfig, preset.name, out scaleFactor, out characterType);
+                pointOfInterest.Setup(icon, character, poiShows, cachedName: preset.nameKey, followActiveScene: true);
                 pointOfInterest.ScaleFactor = scaleFactor;
             }
             if (directionPoi == null)
@@ -105,7 +115,7 @@ namespace MiniMap.Utils
                 ModBehaviour.Logger.Log($"Setting Up directionPoi for {(character.IsMainCharacter ? "Main Character" : preset?.DisplayName)}");
                 Sprite? icon = ModFileOperations.LoadSprite("CharactorDirection.png");
                 pointOfInterest.BaseEulerAngle = 45f;
-                pointOfInterest.Setup(icon, character, showOnlyActivated, showInMap, showInMiniMap, showPetPoi, cachedName: preset?.DisplayName, followActiveScene: true);
+                pointOfInterest.Setup(icon, character, poiShows, cachedName: preset?.DisplayName, followActiveScene: true);
                 pointOfInterest.ScaleFactor = scaleFactor;
             }
         }
@@ -114,21 +124,5 @@ namespace MiniMap.Utils
         {
             return !(character != null && character.Health && !character.Health.IsDead);
         }
-
-        public static void OnFinishedLoadingScene(SceneLoadingContext obj)
-        {
-            ModBehaviour.Logger.Log($"Finished Loading Scene: {obj.sceneName}");
-        }
     }
-
-    //public class BossCharacterBehaviour : MonoBehaviour
-    //{
-    //    private void Update()
-    //    {
-    //        if (enabled && !gameObject.activeSelf)
-    //        {
-    //            gameObject.SetActive(true);
-    //        }
-    //    }
-    //}
 }

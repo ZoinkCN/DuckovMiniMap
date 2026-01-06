@@ -12,8 +12,11 @@ namespace MiniMap.Poi
     public abstract class CharacterPointOfInterestBase : MonoBehaviour, IPointOfInterest
     {
         private bool initialized = false;
+        private bool isMain = false;
+        private bool isPet = false;
 
         private CharacterMainControl? character;
+        private CharacterType characterType;
         private string? cachedName;
         private bool showInMap;
         private bool showInMiniMap;
@@ -29,6 +32,7 @@ namespace MiniMap.Poi
         private string? overrideSceneID;
 
         public virtual CharacterMainControl? Character => character;
+        public virtual CharacterType CharacterType => characterType;
         public virtual string? CachedName { get => cachedName; set => cachedName = value; }
         public virtual bool ShowOnlyAcivated
         {
@@ -40,7 +44,10 @@ namespace MiniMap.Poi
                     showOnlyAcivated = value;
                     if (value)
                     {
-                        Unregister();
+                        if (!gameObject.activeSelf)
+                        {
+                            Unregister();
+                        }
                     }
                     else
                     {
@@ -108,7 +115,7 @@ namespace MiniMap.Poi
             }
         }
 
-        public virtual void Setup(Sprite? icon, CharacterMainControl character, bool showOnlyActivated, bool showInMap, bool showInMiniMap, bool showPetPoi, string? cachedName = null, bool followActiveScene = false, string? overrideSceneID = null)
+        public virtual void Setup(Sprite? icon, CharacterMainControl character, PoiShows? poiShows, string? cachedName = null, bool followActiveScene = false, string? overrideSceneID = null)
         {
             if (initialized) return;
             this.character = character;
@@ -116,21 +123,54 @@ namespace MiniMap.Poi
             this.CachedName = cachedName;
             this.followActiveScene = followActiveScene;
             this.overrideSceneID = overrideSceneID;
-            SetShows(showOnlyActivated, showInMap, showInMiniMap, showPetPoi);
+            if (character.IsMainCharacter)
+            {
+                isMain = true;
+            }
+            else
+            {
+                CharacterRandomPreset? preset = Character?.characterPreset;
+                isPet = preset?.name == "PetPreset_NormalPet";
+            }
+            ModSettingManager.ConfigChanged += OnConfigChanged;
+            SetShows(poiShows);
             initialized = true;
+        }
+
+        private void OnConfigChanged(string key, object? value)
+        {
+            if (value == null) return;
+            switch (key)
+            {
+                case "showOnlyActivated":
+                    ShowOnlyAcivated = (bool)value;
+                    break;
+                case "showPoiInMap":
+                    ShowInMap = (bool)value;
+                    break;
+                case "showPoiInMiniMap":
+                    ShowInMiniMap = (bool)value;
+                    break;
+                case "showPetPoi":
+                    if (isPet)
+                    {
+                        ShowInMap = ShowInMiniMap = (bool)value;
+                    }
+                    break;
+            }
         }
 
         protected virtual void Update()
         {
-            if (character != null && !character.IsMainCharacter && PoiCommon.IsDead(character))
+            if (character != null && !isMain && PoiCommon.IsDead(character))
             {
                 Destroy(this.gameObject);
                 return;
             }
-            if (Character?.IsMainCharacter ?? false)
-            {
-                ShowInMap = ShowInMiniMap = true;
-            }
+            //if (isMain)
+            //{
+            //    ShowInMap = ShowInMiniMap = true;
+            //}
 
         }
 
@@ -147,8 +187,8 @@ namespace MiniMap.Poi
                     PointsOfInterests.Register(this);
                 }, () =>
                 {
-                    ModBehaviour.Logger.Log($"Handling Points Of Interests");
-                    CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
+                    //ModBehaviour.Logger.Log($"Handling Points Of Interests");
+                    //CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
                 });
             }
         }
@@ -160,17 +200,19 @@ namespace MiniMap.Poi
                     PointsOfInterests.Unregister(this);
                 }, () =>
                 {
-                    ModBehaviour.Logger.Log($"Handling Points Of Interests");
-                    CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
+                    //ModBehaviour.Logger.Log($"Handling Points Of Interests");
+                    //CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
                 });
         }
 
-        public virtual void SetShows(bool showOnlyActivated, bool showInMap, bool showInMiniMap, bool showPetPoi)
+        public virtual void SetShows(PoiShows? poiShows)
         {
+            bool showOnlyActivated = poiShows?.ShowOnlyActivated ?? ModSettingManager.GetValue("showOnlyActivated", false);
+            bool showPetPoi = poiShows?.ShowPetPoi ?? ModSettingManager.GetValue("showPetPoi", true);
+            bool showInMap = poiShows?.ShowInMap ?? ModSettingManager.GetValue("showPoiInMap", true);
+            bool showInMiniMap = poiShows?.ShowInMiniMap ?? ModSettingManager.GetValue("showPoiInMiniMap", true);
             ShowOnlyAcivated = showOnlyActivated;
-            CharacterRandomPreset? preset = Character?.characterPreset;
-            bool isMain = Character?.IsMainCharacter ?? false;
-            if (preset?.name == "PetPreset_NormalPet")
+            if (isPet)
             {
                 ShowInMap = ShowInMiniMap = showPetPoi;
             }
@@ -182,6 +224,10 @@ namespace MiniMap.Poi
             if (ShowOnlyAcivated && !(Character?.gameObject.activeSelf ?? false))
             {
                 Unregister();
+            }
+            else
+            {
+                Register();
             }
         }
     }

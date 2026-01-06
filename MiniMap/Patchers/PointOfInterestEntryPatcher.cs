@@ -48,7 +48,6 @@ namespace MiniMap.Patchers
                 GameObject.Destroy(__instance.gameObject);
                 return false;
             }
-
             RectTransform icon = ___icon.rectTransform;
             RectTransform? layout = icon.parent as RectTransform;
             if (layout == null) { return true; }

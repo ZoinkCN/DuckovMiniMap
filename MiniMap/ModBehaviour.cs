@@ -23,7 +23,7 @@ namespace MiniMap
 
         private List<PatcherBase> patchers = new List<PatcherBase>() {
             CharacterSpawnerRootPatcher.Instance,
-            CharacterMainControlPatcher.Instance,
+            //CharacterMainControlPatcher.Instance,
             PointOfInterestEntryPatcher.Instance,
             MiniMapCompassPatcher.Instance,
             MiniMapDisplayPatcher.Instance,
@@ -121,17 +121,13 @@ namespace MiniMap
                 ApplyHarmonyExtenders();
                 ModManager.OnModActivated += ModManager_OnModActivated;
                 LevelManager.OnEvacuated += OnEvacuated;
-                SceneLoader.onFinishedLoadingScene += PoiCommon.OnFinishedLoadingScene;
+                //SceneLoader.onFinishedLoadingScene += PoiManager.OnFinishedLoadingScene;
+                LevelManager.OnAfterLevelInitialized += PoiManager.OnLenvelIntialized;
             }
             catch (Exception e)
             {
                 Logger.LogError($"启用mod失败: {e}");
             }
-        }
-
-        void Start()
-        {
-            PoiManager.Start();
         }
 
         void OnEvacuated(EvacuationInfo _info)
@@ -146,7 +142,8 @@ namespace MiniMap
                 CancelHarmonyExtender();
                 ModManager.OnModActivated -= ModManager_OnModActivated;
                 LevelManager.OnEvacuated -= OnEvacuated;
-                SceneLoader.onFinishedLoadingScene -= PoiCommon.OnFinishedLoadingScene;
+                //SceneLoader.onFinishedLoadingScene -= PoiManager.OnFinishedLoadingScene;
+                LevelManager.OnAfterLevelInitialized -= PoiManager.OnLenvelIntialized;
                 CustomMinimapManager.Destroy();
                 Logger.Log($"disable mod {MOD_NAME}");
             }
@@ -181,7 +178,7 @@ namespace MiniMap
                     ModSettingManager.Update();
                 CustomMinimapManager.Update();
                 CustomMinimapManager.CheckToggleKey();
-                PoiManager.Update();
+                //PoiManager.Update();
             }
             catch (Exception e)
             {
