@@ -78,7 +78,7 @@
             }
         },
         "POI": {
-            "descCN": "位置显示",
+            "descCN": "单位显示",   
             "descEN": "Position Display",
             "configs": {
                 "showOnlyActivated": {

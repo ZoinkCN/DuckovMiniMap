@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using Duckov.MiniMaps;
 using Duckov.MiniMaps.UI;
 using MiniMap.MonoBehaviours;
@@ -67,7 +68,6 @@ namespace MiniMap.Managers
             ModSettingManager.ConfigLoaded += OnConfigLoaded;
             ModSettingManager.ConfigChanged += OnConfigChanged;
             ModSettingManager.ButtonClicked += OnButtonClicked;
-            LevelManager.OnAfterLevelInitialized += OnAfterLevelInitialized;
             SceneManager.sceneLoaded += OnSceneLoaded;
 
             IsInitialized = true;
@@ -75,13 +75,12 @@ namespace MiniMap.Managers
 
         public static void Destroy()
         {
-            ModBehaviour.Logger.Log($"destroy minimap container");
+            ModBehaviour.Logger.Log($"正在销毁小地图容器");
             GameObject.Destroy(miniMapContainer);
             ModSettingManager.ConfigLoaded -= OnConfigLoaded;
             ModSettingManager.ConfigChanged -= OnConfigChanged;
             ModSettingManager.ButtonClicked -= OnButtonClicked;
-            LevelManager.OnAfterLevelInitialized -= OnAfterLevelInitialized;
-            //SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
 
             IsInitialized = false;
         }
@@ -139,7 +138,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error Checking ToggleKey: {e.Message}");
+                ModBehaviour.Logger.LogError($"检查临时开关时发生错误: {e.Message}");
             }
         }
 
@@ -152,8 +151,7 @@ namespace MiniMap.Managers
                 isToggled = enabled;
                 if (isEnabled)
                 {
-                    ApplyMiniMap();
-                    customCanvas?.SetActive(true);
+                    ApplyMiniMap().ContinueWith(() => customCanvas?.SetActive(true));
                 }
                 else
                 {
@@ -163,7 +161,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error setting Enable: {e.Message}");
+                ModBehaviour.Logger.LogError($"设置小地图开关时发生错误: {e.Message}");
             }
         }
 
@@ -180,7 +178,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error trying to show minimap: {e.Message}");
+                ModBehaviour.Logger.LogError($"尝试显示小地图时发生错误: {e.Message}");
             }
         }
 
@@ -197,7 +195,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error hiding minimap: {e.Message}");
+                ModBehaviour.Logger.LogError($"隐藏小地图时发生错误: {e.Message}");
             }
         }
 
@@ -215,7 +213,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error starting setting minimap: {e.Message}");
+                ModBehaviour.Logger.LogError($"调整设置时发生错误: {e.Message}");
             }
         }
 
@@ -255,7 +253,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error updating display zoom: {e.Message}");
+                ModBehaviour.Logger.LogError($"更新小地图缩放时发生错误: {e.Message}");
             }
         }
 
@@ -274,7 +272,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error setting minimap container scale: {e.Message}");
+                ModBehaviour.Logger.LogError($"设置小地图大小时发生错误: {e.Message}");
             }
         }
 
@@ -292,17 +290,10 @@ namespace MiniMap.Managers
 
         private static void OnMinimapPositionChanged()
         {
-            try
-            {
-                RefreshMinimapPosition();
-                if (!HasMap())
-                    return;
-                StartSetting();
-            }
-            catch (Exception e)
-            {
-                ModBehaviour.Logger.LogError($"Error setting minimap position: {e.Message}");
-            }
+            RefreshMinimapPosition();
+            if (!HasMap())
+                return;
+            StartSetting();
         }
 
         private static void RefreshMinimapPosition()
@@ -330,19 +321,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error setting minimap position: {e.Message}");
-            }
-        }
-
-        public static void OnAfterLevelInitialized()
-        {
-            try
-            {
-                initMapCor = ModBehaviour.Instance?.StartCoroutine(ApplyMiniMapCoroutine());
-            }
-            catch (Exception e)
-            {
-                ModBehaviour.Logger.LogError($"Error on scene loaded: {e.Message}");
+                ModBehaviour.Logger.LogError($"更新小地图UI位置时发生错误: {e.Message}");
             }
         }
 
@@ -350,28 +329,25 @@ namespace MiniMap.Managers
         {
             try
             {
-                ModBehaviour.Logger.Log($"加载场景 {scene.name} {mode}");
-                ModBehaviour.Logger.Log($"Level Initialized");
+                ModBehaviour.Logger.Log($"正在加载场景 {scene.name}, 模式: {mode}");
                 if (LevelManager.Instance == null || !isEnabled)
                 {
                     customCanvas?.SetActive(false);
                     return;
                 }
-                ModBehaviour.Logger.Log($"初始化场景 {scene} {mode}");
-
                 if (ModBehaviour.Instance == null)
                 {
-                    ModBehaviour.Logger.LogError($"ModBehaviour Instance is null!");
                     return;
                 }
                 if (initMapCor != null)
                     ModBehaviour.Instance.StopCoroutine(initMapCor);
                 ClearMap();
                 customCanvas?.SetActive(false);
+                initMapCor = ModBehaviour.Instance.StartCoroutine(ApplyMiniMapCoroutine());
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error on scene loaded: {e.Message}");
+                ModBehaviour.Logger.LogError($"加载场景时发生错误: {e.Message}");
             }
         }
 
@@ -390,7 +366,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error clearing map: {e.Message}");
+                ModBehaviour.Logger.LogError($"清理小地图时发生错误: {e.Message}");
             }
         }
 
@@ -420,7 +396,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error handling UI block state: {e.Message}");
+                ModBehaviour.Logger.LogError($"处理UI遮挡时发生错误: {e.Message}");
             }
         }
 
@@ -471,7 +447,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error updating minimap: {e.Message}");
+                ModBehaviour.Logger.LogError($"更新小地图时发生错误: {e.Message}");
             }
         }
 
@@ -479,32 +455,38 @@ namespace MiniMap.Managers
         {
             yield return new WaitForSecondsRealtime(0.5f);
             ModBehaviour.Logger.Log($"初始化小地图");
-            ApplyMiniMap();
-            customCanvas?.SetActive(true);
+            ApplyMiniMap().ContinueWith(() => UniTask.WaitForSeconds(0.5f)).ContinueWith(() => customCanvas?.SetActive(true));
         }
 
-        public static void ApplyMiniMap()
+        public async static UniTask ApplyMiniMap()
         {
             try
             {
+                while (LevelManager.Instance?.MainCharacter == null || LevelManager.Instance?.PetCharacter == null)
+                {
+                    ModBehaviour.Logger.Log($"等待角色初始化...");
+                    await UniTask.Delay(100);
+                }
+                ModBehaviour.Logger.Log($"角色已完成初始化");
                 if (DuplicateMinimapDisplay())
                 {
                     if (ApplyDuplicatedMinimap())
                     {
-                        ModBehaviour.Logger.Log($"MiniMap Applied!");
+                        ModBehaviour.Logger.Log($"已生成小地图");
                         PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.MainCharacter, out _, out DirectionPointOfInterest? mainDirectionPoi);
                         PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.PetCharacter, out CharacterPointOfInterest? petPoi, out DirectionPointOfInterest? petDirectionPoi);
                         AssemblyOption.InvokeMethod(MapMarkerManager.Instance, "Load");
+                        CallDisplayMethod("HandlePointsOfInterests");
                     }
                 }
                 else
                 {
-                    ModBehaviour.Logger.LogError($"Failed to Apply MiniMap!");
+                    ModBehaviour.Logger.LogError($"生成小地图失败！");
                 }
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error Applying minimap: {e.Message}");
+                ModBehaviour.Logger.LogError($"生成小地图时发生错误: {e.Message}");
             }
         }
 
@@ -512,7 +494,7 @@ namespace MiniMap.Managers
         {
             try
             {
-                ModBehaviour.Logger.Log($"Creating Mini Map Container");
+                ModBehaviour.Logger.Log($"创建小地图容器");
                 // 创建 Canvas
                 customCanvas = new GameObject("Zoink_MinimapCanvas");
                 var targetCanvas = customCanvas.AddComponent<Canvas>();
@@ -592,11 +574,11 @@ namespace MiniMap.Managers
 
                 customCanvas.SetActive(false);
                 GameObject.DontDestroyOnLoad(customCanvas);
-                ModBehaviour.Logger.Log($"Mini Map Container Created");
+                ModBehaviour.Logger.Log($"已创建小地图容器");
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error creating minimap container: {e.Message}");
+                ModBehaviour.Logger.LogError($"创建小地图容器时发生错误: {e.Message}");
             }
         }
         public static MiniMapDisplay? GetOriginalDisplay()
@@ -607,13 +589,13 @@ namespace MiniMap.Managers
                 Type minimapViewType = typeof(MiniMapView);
                 if (minimapViewType == null)
                 {
-                    ModBehaviour.Logger.LogError($"MinimapView type not found!");
+                    ModBehaviour.Logger.LogError($"未找到类型：MinimapView");
                     return null;
                 }
                 MiniMapView minimapView = MiniMapView.Instance;
                 if (minimapView == null)
                 {
-                    ModBehaviour.Logger.LogError($"MinimapView instance not found!");
+                    ModBehaviour.Logger.LogError($"未找到实例：MinimapView");
                     return null;
                 }
 
@@ -627,7 +609,7 @@ namespace MiniMap.Managers
 
                     if (minimapDisplayProperty == null)
                     {
-                        ModBehaviour.Logger.LogError($"display field/property not found!");
+                        ModBehaviour.Logger.LogError($"未找到字段或属性：display");
                         return null;
                     }
 
@@ -638,23 +620,16 @@ namespace MiniMap.Managers
                     return minimapDisplayField.GetValue(minimapView) as MiniMapDisplay;
                 }
             }
-            catch
+            catch (Exception e)
             {
+                ModBehaviour.Logger.LogError($"获取原始地图时发生错误:{e.Message}");
                 return null;
             }
         }
 
         private static bool DuplicateMinimapDisplay()
         {
-            try
-            {
-                return DuplicateGameObject(GetOriginalDisplay());
-            }
-            catch (Exception e)
-            {
-                ModBehaviour.Logger.LogError($"Error duplicating minimapdisplay: {e.Message}");
-                return false;
-            }
+            return DuplicateGameObject(GetOriginalDisplay());
         }
 
         private static bool DuplicateGameObject(MiniMapDisplay? originalDisplay)
@@ -663,7 +638,7 @@ namespace MiniMap.Managers
             {
                 if (originalDisplay == null)
                 {
-                    ModBehaviour.Logger.LogError($"Original minimapdisplay is null!");
+                    ModBehaviour.Logger.LogError($"原始地图为空！");
                     return false;
                 }
 
@@ -676,15 +651,13 @@ namespace MiniMap.Managers
                     GameObject.Destroy(duplicatedMinimapDisplay);
                 }
                 duplicatedMinimapObject = GameObject.Instantiate(originalGameObject);
-                ModBehaviour.Logger.Log($"duplicated minimap object: {duplicatedMinimapObject}");
-
-                duplicatedMinimapDisplay = duplicatedMinimapObject?.GetComponent(originalDisplay.GetType()) as MiniMapDisplay;
+                duplicatedMinimapDisplay = duplicatedMinimapObject.GetComponent(originalDisplay.GetType()) as MiniMapDisplay;
                 AssemblyOption.SetField(duplicatedMinimapDisplay, "autoSetupOnEnable", true);
-                //CallDisplayMethod("UnregisterEvents");
-                //CallDisplayMethod("RegisterEvents");
+                CallDisplayMethod("UnregisterEvents");
+                CallDisplayMethod("RegisterEvents");
                 if (duplicatedMinimapDisplay == null || duplicatedMinimapObject == null)
                 {
-                    ModBehaviour.Logger.LogError($"Failed to get duplicated MinimapDisplay component!");
+                    ModBehaviour.Logger.LogError($"获取 MinimapDisplay 复制体失败！");
                     GameObject.Destroy(duplicatedMinimapObject);
                     GameObject.Destroy(duplicatedMinimapDisplay);
                     return false;
@@ -694,7 +667,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error duplicating minimap GameObject: {e.Message}");
+                ModBehaviour.Logger.LogError($"复制地图时发生错误: {e.Message}");
                 return false;
             }
         }
@@ -703,7 +676,7 @@ namespace MiniMap.Managers
         {
             try
             {
-                ModBehaviour.Logger.Log($"Applying MiniMap");
+                ModBehaviour.Logger.Log($"应用复制体");
                 if (duplicatedMinimapObject == null || duplicatedMinimapDisplay == null || miniMapScaleContainer == null)
                 {
                     ModBehaviour.Logger.LogError($"关键组件为null，无法应用当前地图！");
@@ -728,7 +701,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error setting up duplicated minimap: {e.Message}");
+                ModBehaviour.Logger.LogError($"应用复制体时发生错误: {e.Message}");
                 return false;
             }
         }
@@ -737,7 +710,7 @@ namespace MiniMap.Managers
         {
             if (duplicatedMinimapDisplay == null)
             {
-                ModBehaviour.Logger.LogError($"Cannot call {methodName} - duplicatedMinimapDisplay is null!");
+                ModBehaviour.Logger.LogError($"无法执行 {methodName} 方法 - duplicatedMinimapDisplay 为空!");
                 return;
             }
 
@@ -758,7 +731,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error calling {methodName} method: {e.Message}");
+                ModBehaviour.Logger.LogError($"执行 {methodName} 方法时发生错误: {e.Message}");
             }
         }
 
@@ -785,7 +758,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error updating minimap rotation: {e.Message}");
+                ModBehaviour.Logger.LogError($"更新小地图旋转时发生错误: {e.Message}");
             }
         }
 
@@ -817,7 +790,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"Error updating minimap position: {e.Message}");
+                ModBehaviour.Logger.LogError($"更新小地图移动时发生错误: {e.Message}");
             }
         }
     }
