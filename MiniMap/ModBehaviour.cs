@@ -31,6 +31,8 @@ namespace MiniMap
             MiniMapDisplayPatcher.Instance,
             MapMarkerManagerPatcher.Instance,
         };
+		
+		private DistanceBasedUpdateManager? distanceUpdateManager;
 
         public bool PatchSingleExtender(Type targetType, Type extenderType, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
         {
@@ -106,6 +108,23 @@ namespace MiniMap
                 Logger.LogError($"取消扩展器失败: {e}");
             }
         }
+		
+		/// <summary>
+		/// 初始化距离分层更新管理器
+		/// 该管理器负责：
+		/// 1. 15米内的POI进行角度更新（5Hz频率）
+		/// 2. 15米外的POI只初始化一次，不更新角度
+		/// 3. 使用UniTask异步循环替代Update，大幅提升性能
+		/// </summary>
+		private void InitializeDistanceUpdateManager()
+		{
+			GameObject managerObject = new GameObject("DistanceBasedUpdateManager");
+			managerObject.transform.SetParent(transform);
+			distanceUpdateManager = managerObject.AddComponent<DistanceBasedUpdateManager>();
+			
+			Logger.Log($"已初始化距离分层更新管理器");
+		}
+		
         void Awake()
         {
             if (Instance != null)
@@ -121,6 +140,7 @@ namespace MiniMap
         {
             try
             {
+				InitializeDistanceUpdateManager();
                 CustomMinimapManager.Initialize();
                 ApplyHarmonyPatchers();
                 ModManager.OnModActivated += ModManager_OnModActivated;
@@ -151,6 +171,14 @@ namespace MiniMap
                 //SceneLoader.onFinishedLoadingScene -= PoiManager.OnFinishedLoadingScene;
                 //LevelManager.OnAfterLevelInitialized -= PoiManager.OnLenvelIntialized;
 				LevelManager.OnAfterLevelInitialized -= ModSettingManager.CreateUI;
+				
+				if (distanceUpdateManager != null)
+				{
+					GameObject.Destroy(distanceUpdateManager.gameObject);
+					distanceUpdateManager = null;
+					Logger.Log($"已销毁距离分层更新管理器");
+				}
+				
                 CustomMinimapManager.Destroy();
                 Logger.Log($"disable mod {MOD_NAME}");
             }
