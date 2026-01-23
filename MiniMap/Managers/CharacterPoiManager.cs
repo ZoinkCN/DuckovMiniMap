@@ -27,9 +27,9 @@ namespace MiniMap.Managers
         private static PrefabPool<CharacterPoiEntry>? _miniMapCharacterPoiEntryPool;
         public static GameObject? CharacterPoiEntryPrefab => characterPoiEntryPrefabObj;
 
-        private static List<CharacterPoiBase> points = new List<CharacterPoiBase>();
+        private static List<CharacterPoi> points = new List<CharacterPoi>();
 
-        private static ReadOnlyCollection<CharacterPoiBase>? points_ReadOnly;
+        private static ReadOnlyCollection<CharacterPoi>? points_ReadOnly;
         private static PrefabPool<CharacterPoiEntry>? MapCharacterPoiEntryPool
         {
             get
@@ -38,21 +38,7 @@ namespace MiniMap.Managers
                 {
                     CreatePrefab();
                 }
-                if (CustomMinimapManager.OriginalMinimapDisplay == null)
-                {
-                    return null;
-                }
-
-                if (_mapCharacterPoiEntryPool == null)
-                {
-                    MiniMapDisplay display = CustomMinimapManager.OriginalMinimapDisplay;
-                    CharacterPoiEntry? prefab = display.transform.Find("CharacterPoiEntry").GetComponent<CharacterPoiEntry>();
-                    if (prefab == null)
-                    {
-                        return null;
-                    }
-                    _mapCharacterPoiEntryPool = new PrefabPool<CharacterPoiEntry>(prefab, display.transform, OnGetCharacterPoiEntry);
-                }
+                _mapCharacterPoiEntryPool ??= new PrefabPool<CharacterPoiEntry>(characterPoiEntryPrefab!, onGet: OnGetCharacterPoiEntry);
 
                 return _mapCharacterPoiEntryPool;
             }
@@ -65,32 +51,18 @@ namespace MiniMap.Managers
                 {
                     CreatePrefab();
                 }
-                if (CustomMinimapManager.DuplicatedMinimapDisplay == null)
-                {
-                    return null;
-                }
-
-                if (_miniMapCharacterPoiEntryPool == null)
-                {
-                    MiniMapDisplay display = CustomMinimapManager.DuplicatedMinimapDisplay;
-                    CharacterPoiEntry? prefab = display.transform.Find("CharacterPoiEntry").GetComponent<CharacterPoiEntry>();
-                    if (prefab == null)
-                    {
-                        return null;
-                    }
-                    _miniMapCharacterPoiEntryPool = new PrefabPool<CharacterPoiEntry>(prefab, display.transform, OnGetCharacterPoiEntry);
-                }
+                _miniMapCharacterPoiEntryPool ??= new PrefabPool<CharacterPoiEntry>(characterPoiEntryPrefab!, onGet: OnGetCharacterPoiEntry);
 
                 return _miniMapCharacterPoiEntryPool;
             }
         }
-        public static ReadOnlyCollection<CharacterPoiBase> Points
+        public static ReadOnlyCollection<CharacterPoi> Points
         {
             get
             {
                 if (points_ReadOnly == null)
                 {
-                    points_ReadOnly = new ReadOnlyCollection<CharacterPoiBase>(points);
+                    points_ReadOnly = new ReadOnlyCollection<CharacterPoi>(points);
                 }
 
                 return points_ReadOnly;
@@ -110,7 +82,7 @@ namespace MiniMap.Managers
             PrefabPool<CharacterPoiEntry>? pool = isOriginalMap ? MapCharacterPoiEntryPool : MiniMapCharacterPoiEntryPool;
             if (pool == null) return;
             pool.ReleaseAll();
-            foreach (CharacterPoiBase point in Points)
+            foreach (CharacterPoi point in Points)
             {
                 if (!(point == null))
                 {
@@ -119,7 +91,7 @@ namespace MiniMap.Managers
             }
         }
 
-        public static void HandlePointOfInterest(CharacterPoiBase poi, bool isOriginalMap)
+        public static void HandlePointOfInterest(CharacterPoi poi, bool isOriginalMap)
         {
             PrefabPool<CharacterPoiEntry>? pool = isOriginalMap ? MapCharacterPoiEntryPool : MiniMapCharacterPoiEntryPool;
             MiniMapDisplay? display = isOriginalMap ? CustomMinimapManager.OriginalMinimapDisplay : CustomMinimapManager.DuplicatedMinimapDisplay;
@@ -128,7 +100,7 @@ namespace MiniMap.Managers
                 ModBehaviour.Logger.LogError($"CharacterPoiEntryPool:{pool?.ToString() ?? "null"}, MinimapDisplay: {display?.ToString() ?? "null"}");
                 return;
             }
-            ModBehaviour.Logger.Log($"正在创建标记点: {display.name}");
+            //ModBehaviour.Logger.Log($"正在创建标记点: {poi.DisplayName}");
             //if (!poi.WillShow(isOriginalMap))
             //{
             //    return;
@@ -150,17 +122,13 @@ namespace MiniMap.Managers
                     ModBehaviour.Logger.LogError($"MiniMapDisplayEntry: {miniMapDisplayEntry?.ToString() ?? "null"}, Hide: {miniMapDisplayEntry?.Hide}");
                     return;
                 }
-                pool.Get().Setup(display, poi, miniMapDisplayEntry);
-            }
-            else
-            {
-                ModBehaviour.Logger.LogError($"目标场景不匹配：Target: {targetSceneIndex}, Active: {MultiSceneCore.ActiveSubScene?.buildIndex}");
+                pool.Get(display.transform).Setup(display, poi);
             }
         }
 
-        public static void ReleasePointOfInterest(CharacterPoiBase poi, bool isOriginalMap)
+        public static void ReleasePointOfInterest(CharacterPoi poi, bool isOriginalMap)
         {
-            ModBehaviour.Logger.Log("正在删除标记点");
+            //ModBehaviour.Logger.Log($"正在删除标记点: {poi.DisplayName}");
             PrefabPool<CharacterPoiEntry>? pool = isOriginalMap ? MapCharacterPoiEntryPool : _miniMapCharacterPoiEntryPool;
             if (pool == null) return;
             CharacterPoiEntry pointOfInterestEntry = pool.ActiveEntries.FirstOrDefault(e => e != null && e.Target == poi);
@@ -170,14 +138,14 @@ namespace MiniMap.Managers
             }
         }
 
-        public static void Register(CharacterPoiBase point)
+        public static void Register(CharacterPoi point)
         {
             points.Add(point);
             PoiRegistered?.Invoke(point);
             CleanUp();
         }
 
-        public static void Unregister(CharacterPoiBase point)
+        public static void Unregister(CharacterPoi point)
         {
             if (points.Remove(point))
             {
@@ -188,7 +156,7 @@ namespace MiniMap.Managers
 
         private static void CleanUp()
         {
-            points.RemoveAll((CharacterPoiBase e) => e == null);
+            points.RemoveAll((CharacterPoi e) => e == null);
         }
 
         public static void OnEnable()
@@ -212,7 +180,7 @@ namespace MiniMap.Managers
 
         private static void CreatePrefab()
         {
-            if (CustomMinimapManager.OriginalMinimapDisplay == null)
+            if (CustomMinimapManager.Canvas == null)
             {
                 return;
             }
@@ -220,7 +188,7 @@ namespace MiniMap.Managers
 
             GameObject prefabObj = new("CharacterPoiEntry");
             RectTransform prefabRect = prefabObj.AddComponent<RectTransform>();
-            prefabRect.SetParent(CustomMinimapManager.OriginalMinimapDisplay.transform);
+            prefabRect.SetParent(CustomMinimapManager.Canvas.transform);
             prefabRect.localScale = Vector3.one;
             prefabRect.sizeDelta = new Vector2(100f, 100f);
             prefabRect.localPosition = Vector3.zero;

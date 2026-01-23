@@ -10,33 +10,57 @@ using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Utils
 {
-    public static class PoiCommon
+    public static class CharacterPoiCommon
     {
-        private static Sprite? GetIcon(JObject? config, string? presetName, out float scale, out CharacterType characterType)
+        private static CharacterPoiIconData GetIcon(JObject? config, CharacterMainControl? character, out CharacterType characterType)
         {
-            if (config == null || string.IsNullOrEmpty(presetName))
+            CharacterPoiIconData iconData = new CharacterPoiIconData();
+            characterType = CharacterType.Enemy;
+            if (config == null)
             {
-                scale = 0.5f;
-                characterType = CharacterType.Enemy;
-                return null;
+                return iconData;
             }
-            float defaultScale = config.Value<float?>("defaultScale") ?? 1f;
-            string? defaultIconName = config.Value<string?>("defaultIcon");
+            CharacterRandomPreset? preset = character?.characterPreset;
+            float overallDefaultIconScale = config.Value<float?>("defaultIconScale") ?? 1f;
+            float overallDefaultArrowScale = config.Value<float?>("defaultArrowScale") ?? 1f;
+            string? overallDefaultIconName = config.Value<string?>("defaultIcon");
+            string? overallDefaultArrowName = config.Value<string?>("defaultArrow");
+            if (character.IsMainCharacter())
+            {
+                JObject? data = config["main"] as JObject;
+                string? iconName = data?.Value<string?>("icon");
+                string? arrowName = data?.Value<string?>("arrow") ?? overallDefaultArrowName;
+                iconData.Icon = ModFileOperations.LoadSprite(iconName);
+                iconData.Arrow = ModFileOperations.LoadSprite(arrowName);
+                iconData.IconScale = data?.Value<float?>("iconScale") ?? overallDefaultIconScale;
+                iconData.ArrowScale = data?.Value<float?>("arrowScale") ?? overallDefaultArrowScale;
+                characterType = CharacterType.Main;
+                return iconData;
+            }
+            if (preset == null || string.IsNullOrEmpty(preset.name))
+            {
+                return iconData;
+            }
+            string presetName = preset.name;
             foreach (KeyValuePair<string, JToken?> item in config)
             {
-                if (item.Value is not JObject jObject) { continue; }
+                if (item.Key == "main" || item.Value is not JObject jObject) { continue; }
+                float typeDefaultIconScale = jObject.Value<float?>("defaultIconScale") ?? overallDefaultIconScale;
+                string? typeDefaultIconName = jObject.Value<string?>("defaultIcon") ?? overallDefaultIconName;
+                float typeDefaultArrowScale = jObject.Value<float?>("defaultArrowScale") ?? overallDefaultArrowScale;
+                string? typeDefaultArrowName = jObject.Value<string?>("defaultArrow") ?? overallDefaultArrowName;
                 if (jObject.ContainsKey(presetName))
                 {
-                    string? iconName = jObject.Value<string?>(presetName);
-                    if (string.IsNullOrEmpty(iconName))
-                    {
-                        iconName = jObject.Value<string?>("defaultIcon");
-                    }
-                    if (string.IsNullOrEmpty(iconName))
-                    {
-                        iconName = defaultIconName;
-                    }
-                    scale = jObject.Value<float?>("scale") ?? defaultScale;
+                    JObject? data = jObject[presetName] as JObject;
+                    string? iconName = data?.Value<string?>("icon") ?? typeDefaultIconName;
+                    string? arrowName = data?.Value<string?>("arrow") ?? typeDefaultArrowName;
+                    iconData.Icon = ModFileOperations.LoadSprite(iconName);
+                    iconData.Arrow = ModFileOperations.LoadSprite(arrowName);
+                    iconData.IconScale = data?.Value<float?>("iconScale") ?? typeDefaultIconScale;
+                    iconData.ArrowScale = data?.Value<float?>("arrowScale") ?? typeDefaultArrowScale;
+                    iconData.HideIcon = data?.Value<bool>("hideIcon") ?? false;
+                    iconData.HideArrow = data?.Value<bool>("hideArrow") ?? false;
+
                     if (presetName == "PetPreset_NormalPet")
                     {
                         characterType = CharacterType.Pet;
@@ -51,20 +75,22 @@ namespace MiniMap.Utils
                             _ => CharacterType.Enemy,
                         };
                     }
-                    return ModFileOperations.LoadSprite(iconName);
+                    return iconData;
                 }
             }
-            scale = defaultScale;
+            iconData.Icon = ModFileOperations.LoadSprite(overallDefaultIconName);
+            iconData.Arrow = ModFileOperations.LoadSprite(overallDefaultArrowName);
+            iconData.IconScale = overallDefaultIconScale;
+            iconData.ArrowScale = overallDefaultArrowScale;
             characterType = CharacterType.Enemy;
-            return ModFileOperations.LoadSprite(defaultIconName);
+            return iconData;
         }
 
-        public static void CreatePoiIfNeeded(CharacterMainControl? character, out CharacterPointOfInterest? characterPoi, out DirectionPointOfInterest? directionPoi)
+        public static void CreatePoiIfNeeded(CharacterMainControl? character, out CharacterPoi? characterPoi)
         {
             if (!LevelManager.LevelInited || character == null)
             {
                 characterPoi = null;
-                directionPoi = null;
                 return;
             }
             if (character.transform.parent?.name == "Level_Factory_Main")
@@ -74,7 +100,6 @@ namespace MiniMap.Utils
                     GameObject.Destroy(character.gameObject);
                 }
                 characterPoi = null;
-                directionPoi = null;
                 return;
             }
             SimplePointOfInterest? originPoi = character.GetComponentInChildren<SimplePointOfInterest>() ?? character.GetComponent<SimplePointOfInterest>();
@@ -82,55 +107,48 @@ namespace MiniMap.Utils
             if (poiObject == null)
             {
                 characterPoi = null;
-                directionPoi = null;
                 return;
             }
             CharacterRandomPreset? preset = character.characterPreset;
             if (preset == null && !character.IsMainCharacter)
             {
                 characterPoi = null;
-                directionPoi = null;
                 return;
             }
-            characterPoi = poiObject.GetOrAddComponent<CharacterPointOfInterest>();
-            directionPoi = poiObject.GetOrAddComponent<DirectionPointOfInterest>();
+            characterPoi = poiObject.GetComponent<CharacterPoi>();
+            //directionPoi = poiObject.GetOrAddComponent<DirectionPointOfInterest>();
             CharacterType characterType;
-            float scaleFactor = 1;
-            if (!characterPoi.Initialized)
+            if (characterPoi == null)
             {
+                characterPoi = poiObject.AddComponent<CharacterPoi>();
                 JObject? iconConfig = ModFileOperations.LoadJson("iconConfig.json", ModBehaviour.Logger);
-                Sprite? icon = GetIcon(iconConfig, preset?.name, out scaleFactor, out characterType);
-                if (character.IsMainCharacter)
-                {
-                    characterType = CharacterType.Main;
-                    scaleFactor = 1f;
-                }
-                characterPoi.ScaleFactor = scaleFactor;
+                CharacterPoiIconData iconData = GetIcon(iconConfig, character, out characterType);
+                Sprite? icon = iconData.Icon;
+                Sprite? arrowIcon = iconData.Arrow;
+                characterPoi.IconScaleFactor = iconData.IconScale;
+                characterPoi.ArrowScaleFactor = iconData.ArrowScale;
+                characterPoi.HideIcon = iconData.HideIcon;
+                characterPoi.HideArrow = iconData.HideArrow;
                 if (originPoi == null)
                 {
-                    characterPoi.Setup(icon, character, characterType, preset?.nameKey, followActiveScene: true);
+                    characterPoi.Setup(iconData.Icon, iconData.Arrow, character, characterType, preset?.nameKey, followActiveScene: true);
                 }
                 else
                 {
-                    characterPoi.Setup(originPoi, character, characterType, followActiveScene: true);
+                    characterPoi.Setup(originPoi, iconData.Icon, arrowIcon, character, characterType, followActiveScene: true);
                 }
                 if (originPoi)
                 {
                     GameObject.Destroy(originPoi);
                 }
             }
-            else
-            {
-                characterType = characterPoi.CharacterType;
-            }
-
-            if (!directionPoi.Initialized)
-            {
-                Sprite? icon = ModFileOperations.LoadSprite("CharactorDirection.png");
-                directionPoi.BaseEulerAngle = 45f;
-                directionPoi.ScaleFactor = scaleFactor;
-                directionPoi.Setup(icon, character, characterType, cachedName: preset?.DisplayName, followActiveScene: true);
-            }
+            //if (!directionPoi.Initialized)
+            //{
+            //    
+            //    directionPoi.BaseEulerAngle = 45f;
+            //    directionPoi.ScaleFactor = scaleFactor;
+            //    directionPoi.Setup(icon, character, characterType, cachedName: preset?.DisplayName, followActiveScene: true);
+            //}
         }
 
         public static bool IsDead(CharacterMainControl? character)

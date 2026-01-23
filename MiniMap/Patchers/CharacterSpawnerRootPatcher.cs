@@ -19,7 +19,7 @@ namespace MiniMap.Patchers
         {
             try
             {
-                PoiCommon.CreatePoiIfNeeded(c, out _, out _);
+                CharacterPoiCommon.CreatePoiIfNeeded(c, out _);
             }
             catch (Exception e)
             {

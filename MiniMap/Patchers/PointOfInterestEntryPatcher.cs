@@ -23,7 +23,7 @@ namespace MiniMap.Patchers
 
         [MethodPatcher("UpdateScale", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
         public static bool UpdateScalePrefix(
-            CharacterPoiEntry __instance,
+            PointOfInterestEntry __instance,
             MiniMapDisplay ___master,
             IPointOfInterest ___pointOfInterest,
             Transform ___iconContainer,
@@ -52,32 +52,8 @@ namespace MiniMap.Patchers
             return false;
         }
 
-        [MethodPatcher("UpdateRotation", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        public static bool UpdateRotationPrefix(CharacterPoiEntry __instance, MiniMapDisplayEntry ___minimapEntry)
-        {
-            try
-            {
-                if (__instance.Target is DirectionPointOfInterest poi)
-                {
-                    MiniMapDisplay? display = ___minimapEntry.GetComponentInParent<MiniMapDisplay>();
-                    if (display == null)
-                    {
-                        return true;
-                    }
-                    __instance.transform.rotation = Quaternion.Euler(0f, 0f, poi.RealEulerAngle + display.transform.rotation.eulerAngles.z);
-                    return false;
-                }
-                return true;
-            }
-            catch (Exception e)
-            {
-                ModBehaviour.Logger.LogError($"PointOfInterestEntry UpdateRotation failed: {e.Message}");
-                return true;
-            }
-        }
-
         [MethodPatcher("Update", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        public static bool UpdatePrefix(CharacterPoiEntry __instance, Image ___icon, MiniMapDisplay ___master, TextMeshProUGUI ___displayName)
+        public static bool UpdatePrefix(PointOfInterestEntry __instance, Image ___icon, MiniMapDisplay ___master, TextMeshProUGUI ___displayName)
         {
             if (__instance.Target == null || __instance.Target.IsDestroyed())
             {
@@ -108,7 +84,7 @@ namespace MiniMap.Patchers
         }
 
         [MethodPatcher("Setup", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        public static void SetupPrefix(CharacterPoiEntry __instance, MonoBehaviour target, Image ___icon)
+        public static void SetupPrefix(PointOfInterestEntry __instance, MonoBehaviour target, Image ___icon)
         {
             if (target is IPointOfInterest poi)
             {

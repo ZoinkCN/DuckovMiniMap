@@ -1,56 +1,94 @@
 {
+    "main": {
+        "iconScale": 1
+    },
     "friendly": {
         "defaultIcon": "MiniMap_FriendlyIcon.png",
-        "scale": 0.6,
-        "PetPreset_NormalPet": "MiniMap_PetIcon.png",
-        "EnemyPreset_QuestGiver_Fo": "",
-        "EnemyPreset_QuestGiver_XiaoMing": "",
-        "SpawnPreset_Animal_Jinitaimei": "",
-        "EnemyPreset_Merchant_Jeff": "",
-        "MatePreset_PMC": ""
+        "defaultIconScale": 0.6,
+        "defaultArrow": "CharactorDirection.png",
+        "defaultArrowScale": 0.3,
+        "PetPreset_NormalPet": {
+            "icon": "MiniMap_PetIcon.png",
+            "iconSacle": 0.6,
+            "hideIcon": false,
+            "arrow": "CharactorDirection.png",
+            "arrowScale": 0.3,
+            "hideArrow": false
+        },
+        "EnemyPreset_QuestGiver_Fo": {},
+        "EnemyPreset_QuestGiver_XiaoMing": {},
+        "SpawnPreset_Animal_Jinitaimei": {},
+        "EnemyPreset_Merchant_Jeff": {},
+        "MatePreset_PMC": {}
     },
     "enemy": {
         "defaultIcon": "MiniMap_EnemyIcon.png",
-        "scale": 0.6
+        "defaultIconScale": 0.6,
+        "DummyEnemyCharacterRandomPresetLv 0": {
+            "hideArrow": true,
+            "iconScale": 0.4
+        },
+        "DummyEnemyCharacterRandomPresetLv 1": {
+            "hideArrow": true,
+            "iconScale": 0.4
+        },
+        "DummyEnemyCharacterRandomPresetLv 2": {
+            "hideArrow": true,
+            "iconScale": 0.4
+        },
+        "DummyEnemyCharacterRandomPresetLv 3": {
+            "hideArrow": true,
+            "iconScale": 0.4
+        },
+        "DummyEnemyCharacterRandomPresetLv 4": {
+            "hideArrow": true,
+            "iconScale": 0.4
+        },
+        "DummyEnemyCharacterRandomPresetLv 5": {
+            "hideArrow": true,
+            "iconScale": 0.4
+        }
     },
     "neutral": {
         "defaultIcon": "MiniMap_NeutralIcon.png",
-        "scale": 0.6,
-        "EnemyPreset_Spider_RotateShoot": "",
-        "EnemyPreset_Melee_UltraMan": "",
-        "EnemyPreset_Merchant_Myst": "",
-        "EnemyPreset_Merchant_Myst0": "",
-        "EnemyPreset_Merchant_Test": ""
+        "defaultIconScale": 0.6,
+        "EnemyPreset_Spider_RotateShoot": {},
+        "EnemyPreset_Melee_UltraMan": {},
+        "EnemyPreset_Merchant_Myst": {},
+        "EnemyPreset_Merchant_Myst0": {},
+        "EnemyPreset_Merchant_Test": {}
     },
     "boss": {
         "defaultIcon": "MiniMap_BossIcon.png",
-        "scale": 0.9,
-        "EnemyPreset_BossMelee_SchoolBully": "",
-        "EnemyPreset_Boss_3Shot": "",
-        "EnemyPreset_Boss_Arcade": "",
-        "EnemyPreset_Boss_BALeader": "",
-        "EnemyPreset_Boss_Deng": "",
-        "EnemyPreset_Boss_Fly": "",
-        "EnemyPreset_Boss_Grenade": "",
-        "EnemyPreset_Boss_RPG": "",
-        "EnemyPreset_Boss_Red": "",
-        "EnemyPreset_Boss_Roadblock": "",
-        "EnemyPreset_Boss_SenorEngineer": "",
-        "EnemyPreset_Boss_ServerGuardian": "",
-        "EnemyPreset_Boss_ShortEagle": "",
-        "EnemyPreset_Boss_Shot": "",
-        "EnemyPreset_Boss_Speedy": "",
-        "EnemyPreset_Boss_Storm_1_BreakArmor": "",
-        "EnemyPreset_Boss_Storm_2_Poison": "",
-        "EnemyPreset_Boss_Storm_3_Fire": "",
-        "EnemyPreset_Boss_Storm_4_Electric": "",
-        "EnemyPreset_Boss_Storm_5_Space": "",
-        "EnemyPreset_Boss_Vida": "",
-        "EnemyPreset_Boss_XING": "",
-        "EnemyPreset_Prison_Boss": "",
-        "EnemyPreset_Boss_Snow_BigIce": "",
-        "EnemyPreset_Boss_Speedy_Ice": ""
+        "defaultIconScale": 0.9,
+        "EnemyPreset_BossMelee_SchoolBully": {},
+        "EnemyPreset_Boss_3Shot": {},
+        "EnemyPreset_Boss_Arcade": {},
+        "EnemyPreset_Boss_BALeader": {},
+        "EnemyPreset_Boss_Deng": {},
+        "EnemyPreset_Boss_Fly": {},
+        "EnemyPreset_Boss_Grenade": {},
+        "EnemyPreset_Boss_RPG": {},
+        "EnemyPreset_Boss_Red": {},
+        "EnemyPreset_Boss_Roadblock": {},
+        "EnemyPreset_Boss_SenorEngineer": {},
+        "EnemyPreset_Boss_ServerGuardian": {},
+        "EnemyPreset_Boss_ShortEagle": {},
+        "EnemyPreset_Boss_Shot": {},
+        "EnemyPreset_Boss_Speedy": {},
+        "EnemyPreset_Boss_Storm_1_BreakArmor": {},
+        "EnemyPreset_Boss_Storm_2_Poison": {},
+        "EnemyPreset_Boss_Storm_3_Fire": {},
+        "EnemyPreset_Boss_Storm_4_Electric": {},
+        "EnemyPreset_Boss_Storm_5_Space": {},
+        "EnemyPreset_Boss_Vida": {},
+        "EnemyPreset_Boss_XING": {},
+        "EnemyPreset_Prison_Boss": {},
+        "EnemyPreset_Boss_Snow_BigIce": {},
+        "EnemyPreset_Boss_Speedy_Ice": {}
     },
     "defaultIcon": "MiniMap_EnemyIcon.png",
-    "defaultScale": 0.6
+    "defaultIconScale": 0.6,
+    "defaultArrow": "CharactorDirection.png",
+    "defaultArrowScale": 0.3
 }

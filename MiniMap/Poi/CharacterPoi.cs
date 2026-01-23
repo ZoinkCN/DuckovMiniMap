@@ -11,31 +11,37 @@ using UnityEngine;
 
 namespace MiniMap.Poi
 {
-    public abstract class CharacterPoiBase : MonoBehaviour, IPointOfInterest
+    public class CharacterPoi : MonoBehaviour
     {
-        private bool initialized = false;
-
         private CharacterMainControl? character;
         private CharacterType characterType;
         private string? cachedName;
         private bool showOnlyActivated;
         private Sprite? icon;
+        private Sprite? arrow;
         private Color color = Color.white;
+        private Color arrowColor = Color.white;
         private Color shadowColor = Color.clear;
         private float shadowDistance = 0f;
         private bool localized = true;
         private bool followActiveScene;
         private bool isArea;
         private float areaRadius;
-        private float scaleFactor = 1f;
+        private float iconScaleFactor = 1f;
+        private float arrowScaleFactor = 1f;
         private bool hideIcon = false;
+        private bool hideArrow = false;
         private string? overrideSceneID;
+        private float rotationEulerAngle;
+        //private float baseEulerAngle;
 
-        public virtual bool Initialized => initialized;
-        public virtual CharacterMainControl? Character => character;
-        public virtual CharacterType CharacterType => characterType;
-        public virtual string? CachedName { get => cachedName; set => cachedName = value; }
-        public virtual bool ShowOnlyActivated
+        public float RotationEulerAngle { get => rotationEulerAngle % 360; set => rotationEulerAngle = value % 360; }
+        //public float BaseEulerAngle { get => baseEulerAngle % 360; set => baseEulerAngle = value % 360; }
+        //public float RealEulerAngle => (baseEulerAngle + rotationEulerAngle) % 360;
+        public CharacterMainControl? Character => character;
+        public CharacterType CharacterType => characterType;
+        public string? CachedName { get => cachedName; set => cachedName = value; }
+        public bool ShowOnlyActivated
         {
             get => showOnlyActivated;
             protected set
@@ -51,14 +57,17 @@ namespace MiniMap.Poi
                 }
             }
         }
-        public virtual string DisplayName => CachedName?.ToPlainText() ?? string.Empty;
-        public virtual float ScaleFactor { get => scaleFactor; set => scaleFactor = value; }
-        public virtual Color Color { get => color; set => color = value; }
-        public virtual Color ShadowColor { get => shadowColor; set => shadowColor = value; }
-        public virtual float ShadowDistance { get => shadowDistance; set => shadowDistance = value; }
-        public virtual bool Localized { get => localized; set => localized = value; }
-        public virtual Sprite? Icon => icon;
-        public virtual int OverrideScene
+        public string DisplayName => CachedName?.ToPlainText() ?? string.Empty;
+        public float IconScaleFactor { get => iconScaleFactor; set => iconScaleFactor = value; }
+        public float ArrowScaleFactor { get => arrowScaleFactor; set => arrowScaleFactor = value; }
+        public Color Color { get => color; set => color = value; }
+        public Color ArrowColor { get => arrowColor; set => arrowColor = value; }
+        public Color ShadowColor { get => shadowColor; set => shadowColor = value; }
+        public float ShadowDistance { get => shadowDistance; set => shadowDistance = value; }
+        public bool Localized { get => localized; set => localized = value; }
+        public Sprite? Icon => icon;
+        public Sprite? Arrow => arrow;
+        public int OverrideScene
         {
             get
             {
@@ -76,15 +85,16 @@ namespace MiniMap.Poi
                 return -1;
             }
         }
-        public virtual bool IsArea { get => isArea; set => isArea = value; }
-        public virtual float AreaRadius { get => areaRadius; set => areaRadius = value; }
-        public virtual bool HideIcon { get => hideIcon; set => hideIcon = value; }
-        protected virtual void OnEnable()
+        public bool IsArea { get => isArea; set => isArea = value; }
+        public float AreaRadius { get => areaRadius; set => areaRadius = value; }
+        public bool HideIcon { get => hideIcon || icon == null; set => hideIcon = value; }
+        public bool HideArrow { get => hideArrow || arrow == null; set => hideArrow = value; }
+        protected void OnEnable()
         {
             Register();
         }
 
-        protected virtual void OnDisable()
+        protected void OnDisable()
         {
             if (ShowOnlyActivated)
             {
@@ -92,26 +102,25 @@ namespace MiniMap.Poi
             }
         }
 
-        public virtual void Setup(Sprite? icon, CharacterMainControl character, CharacterType characterType, string? cachedName = null, bool followActiveScene = false, string? overrideSceneID = null)
+        public void Setup(Sprite? icon, Sprite? arrow, CharacterMainControl character, CharacterType characterType, string? cachedName = null, bool followActiveScene = false, string? overrideSceneID = null)
         {
-            if (initialized) return;
             this.character = character;
             this.characterType = characterType;
             this.icon = icon;
+            this.arrow = arrow;
             this.cachedName = cachedName;
             this.followActiveScene = followActiveScene;
             this.overrideSceneID = overrideSceneID;
             ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
             ModSettingManager.ConfigChanged += OnConfigChanged;
-            initialized = true;
         }
 
-        public virtual void Setup(SimplePointOfInterest poi, CharacterMainControl character, CharacterType characterType, bool followActiveScene = false, string? overrideSceneID = null)
+        public void Setup(SimplePointOfInterest poi, Sprite? icon, Sprite? arrow, CharacterMainControl character, CharacterType characterType, bool followActiveScene = false, string? overrideSceneID = null)
         {
-            if (initialized) return;
             this.character = character;
             this.characterType = characterType;
-            this.icon = GameObject.Instantiate(poi.Icon);
+            this.icon = icon ?? GameObject.Instantiate(poi.Icon);
+            this.arrow = arrow;
             FieldInfo? field = typeof(SimplePointOfInterest).GetField("displayName", BindingFlags.NonPublic | BindingFlags.Instance);
             this.cachedName = field.GetValue(poi) as string;
             this.followActiveScene = followActiveScene;
@@ -123,7 +132,6 @@ namespace MiniMap.Poi
             this.shadowDistance = poi.ShadowDistance;
             ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
             ModSettingManager.ConfigChanged += OnConfigChanged;
-            initialized = true;
         }
 
         private void OnConfigChanged(string key, object? value)
@@ -150,38 +158,40 @@ namespace MiniMap.Poi
             }
         }
 
-        protected virtual void Update()
+        protected void Update()
         {
-            if (character != null && characterType != CharacterType.Main && PoiCommon.IsDead(character))
+            if (character == null || characterType != CharacterType.Main && CharacterPoiCommon.IsDead(character))
             {
                 Destroy(this.gameObject);
                 return;
             }
+            RotationEulerAngle = MiniMapCommon.GetChracterRotation(Character);
         }
 
         protected void OnDestroy()
         {
+            Unregister();
             ModSettingManager.ConfigChanged -= OnConfigChanged;
         }
 
-        public virtual void Register(bool force = false)
+        public void Register(bool force = false)
         {
             if (force)
             {
-                PointsOfInterests.Unregister(this);
+                CharacterPoiManager.Unregister(this);
             }
-            if (!PointsOfInterests.Points.Contains(this))
+            if (!CharacterPoiManager.Points.Contains(this))
             {
-                PointsOfInterests.Register(this);
+                CharacterPoiManager.Register(this);
             }
         }
 
-        public virtual void Unregister()
+        public void Unregister()
         {
-            PointsOfInterests.Unregister(this);
+            CharacterPoiManager.Unregister(this);
         }
 
-        public virtual bool WillShow(bool isOriginalMap = true)
+        public bool WillShow(bool isOriginalMap = true)
         {
             bool willShowInThisMap = isOriginalMap ? ModSettingManager.GetValue("showPoiInMap", true) : ModSettingManager.GetValue("showPoiInMiniMap", true);
             return characterType switch

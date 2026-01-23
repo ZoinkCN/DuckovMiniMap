@@ -25,39 +25,31 @@ namespace MiniMap.Patchers
         public static bool HandlePointOfInterestPrefix(MiniMapDisplay __instance, MonoBehaviour poi)
         {
             if (poi == null) return false;
-            if (poi is CharacterPoiBase characterPoi)
+            if (poi is CharacterPoi characterPoi)
             {
-                return characterPoi.WillShow(__instance == CustomMinimapManager.OriginalMinimapDisplay);
+                CharacterPoiManager.HandlePointOfInterest(characterPoi, __instance == CustomMinimapManager.OriginalMinimapDisplay);
+                return false;
             }
             return true;
         }
 
-        //[MethodPatcher("HandlePointsOfInterests", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        //public static bool HandlePointsOfInterestsPrefix(MiniMapDisplay __instance, PrefabPool<PointOfInterestEntry> ___PointOfInterestEntryPool)
-        //{
-        //    try
-        //    {
-        //        if (___PointOfInterestEntryPool == null) { return false; }
-        //        foreach (PointOfInterestEntry entry in ___PointOfInterestEntryPool.ActiveEntries.ToArray())
-        //        {
-        //            if (entry.Target == null || !PointsOfInterests.Points.Contains(entry.Target))
-        //                ___PointOfInterestEntryPool.Release(entry);
-        //        }
-        //        foreach (MonoBehaviour monoBehaviour in PointsOfInterests.Points)
-        //        {
-        //            if (monoBehaviour != null && !___PointOfInterestEntryPool.ActiveEntries.Any(s => s.Target == monoBehaviour))
-        //            {
-        //                AssemblyOption.InvokeMethod(__instance, "HandlePointOfInterest", new object[] { monoBehaviour });
-        //            }
-        //        }
-        //        return false;
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        ModBehaviour.Logger.LogError($"处理小地图兴趣点时出错：" + e.ToString());
-        //        return true;
-        //    }
-        //}
+        [MethodPatcher("ReleasePointOfInterest", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
+        public static bool ReleasePointOfInterestPrefix(MiniMapDisplay __instance, MonoBehaviour poi)
+        {
+            if (poi == null) return false;
+            if (poi is CharacterPoi characterPoi)
+            {
+                CharacterPoiManager.ReleasePointOfInterest(characterPoi, __instance == CustomMinimapManager.OriginalMinimapDisplay);
+                return false;
+            }
+            return true;
+        }
+
+        [MethodPatcher("HandlePointsOfInterests", PatchType.Postfix, BindingFlags.Instance | BindingFlags.NonPublic)]
+        public static void HandlePointsOfInterestsPrefix(MiniMapDisplay __instance)
+        {
+            CharacterPoiManager.HandlePointsOfInterests(__instance == CustomMinimapManager.OriginalMinimapDisplay);
+        }
 
         [MethodPatcher("SetupRotation", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
         public static bool SetupRotationPrefix(MiniMapDisplay __instance)
@@ -73,6 +65,20 @@ namespace MiniMap.Patchers
                 ModBehaviour.Logger.LogError($"设置小地图旋转时出错：" + e.ToString());
                 return true;
             }
+        }
+
+        [MethodPatcher("RegisterEvents", PatchType.Postfix, BindingFlags.Instance | BindingFlags.NonPublic)]
+        public static void RegisterEventsPostfix(MiniMapDisplay __instance)
+        {
+            AssemblyOption.BindStaticEvent(typeof(CharacterPoiManager), nameof(CharacterPoiManager.PoiRegistered), __instance, "HandlePointOfInterest");
+            AssemblyOption.BindStaticEvent(typeof(CharacterPoiManager), nameof(CharacterPoiManager.PoiUnregistered), __instance, "ReleasePointOfInterest");
+        }
+
+        [MethodPatcher("UnregisterEvents", PatchType.Postfix, BindingFlags.Instance | BindingFlags.NonPublic)]
+        public static void UnregisterEventsPostfix(MiniMapDisplay __instance)
+        {
+            AssemblyOption.UnbindStaticEvent(typeof(CharacterPoiManager), nameof(CharacterPoiManager.PoiRegistered), __instance, "HandlePointOfInterest");
+            AssemblyOption.UnbindStaticEvent(typeof(CharacterPoiManager), nameof(CharacterPoiManager.PoiUnregistered), __instance, "ReleasePointOfInterest");
         }
     }
 }
