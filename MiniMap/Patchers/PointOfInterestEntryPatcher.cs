@@ -35,7 +35,7 @@ namespace MiniMap.Patchers
             float parentLocalScale = __instance.GetProperty<float>("ParentLocalScale");
             int iconScaleType = ModSettingManager.GetValue("iconScaleType", 0);
             var baseScale = Vector3.one * d / parentLocalScale;
-            ___iconContainer.localScale = ___master != CustomMinimapManager.DuplicatedMinimapDisplay ?
+            ___iconContainer.localScale = ___master != MinimapManager.MinimapDisplay ?
                 baseScale :
                 iconScaleType switch
                 {
@@ -95,7 +95,7 @@ namespace MiniMap.Patchers
                 {
                     ___icon.color = poi.Color;
                 }
-                ___displayName.text = ___master == CustomMinimapManager.DuplicatedMinimapDisplay && ModSettingManager.GetValue("hideDisplayName", false) ? "" : poi.DisplayName;
+                ___displayName.text = ___master == MinimapManager.MinimapDisplay && ModSettingManager.GetValue("hideDisplayName", false) ? "" : poi.DisplayName;
             }
             RectTransform icon = ___icon.rectTransform;
             RectTransform? layout = icon.parent as RectTransform;
