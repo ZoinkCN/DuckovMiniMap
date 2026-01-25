@@ -151,13 +151,10 @@ namespace MiniMap.Poi
             }
         }
 
+        // 移除死亡检查，只保留空Update方法用于子类扩展
         protected virtual void Update()
         {
-            if (character != null && characterType != CharacterType.Main && PoiCommon.IsDead(character))
-            {
-                Destroy(this.gameObject);
-                return;
-            }
+            // 不再进行死亡检查，由事件驱动处理
         }
 
         protected void OnDestroy()
