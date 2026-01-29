@@ -1,14 +1,15 @@
 ﻿using Duckov.MiniMaps;
+using Duckov.Modding;
 using Duckov.Scenes;
-using MiniMap.Extentions;
 using MiniMap.Managers;
 using MiniMap.Utils;
 using SodaCraft.Localizations;
 using System.Collections.Generic;
 using System.Reflection;
-using Unity.VisualScripting;
 using UnityEngine;
-using ZoinkModdingLibrary.Patcher;
+using ZoinkModdingLibrary.Extentions;
+using ZoinkModdingLibrary.ModSettings;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Poi
 {
@@ -102,7 +103,7 @@ namespace MiniMap.Poi
             this.cachedName = cachedName;
             this.followActiveScene = followActiveScene;
             this.overrideSceneID = overrideSceneID;
-            ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
+            ShowOnlyActivated = ModSettingManager.GetValue(ModBehaviour.ModInfo, "showOnlyActivated", false);
             ModSettingManager.ConfigChanged += OnConfigChanged;
             initialized = true;
         }
@@ -122,13 +123,14 @@ namespace MiniMap.Poi
             this.color = poi.Color;
             this.shadowColor = poi.ShadowColor;
             this.shadowDistance = poi.ShadowDistance;
-            ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
+            ShowOnlyActivated = ModSettingManager.GetValue(ModBehaviour.ModInfo, "showOnlyActivated", false);
             ModSettingManager.ConfigChanged += OnConfigChanged;
             initialized = true;
         }
 
-        private void OnConfigChanged(string key, object? value)
+        private void OnConfigChanged(ModInfo modInfo,string key, object? value)
         {
+            if (!modInfo.ModIdEquals(ModBehaviour.Instance!.info)) return;
             if (value == null) return;
             switch (key)
             {
@@ -184,14 +186,14 @@ namespace MiniMap.Poi
 
         public virtual bool WillShow(bool isOriginalMap = true)
         {
-            bool willShowInThisMap = isOriginalMap ? ModSettingManager.GetValue("showPoiInMap", true) : ModSettingManager.GetValue("showPoiInMiniMap", true);
+            bool willShowInThisMap = isOriginalMap ? ModSettingManager.GetValue(ModBehaviour.ModInfo, "showPoiInMap", true) : ModSettingManager.GetValue(ModBehaviour.ModInfo, "showPoiInMiniMap", true);
             return characterType switch
             {
                 CharacterType.Main or CharacterType.NPC => true,
-                CharacterType.Pet => ModSettingManager.GetValue("showPetPoi", true),
-                CharacterType.Boss => ModSettingManager.GetValue("showBossPoi", true) && willShowInThisMap,
-                CharacterType.Enemy => ModSettingManager.GetValue("showEnemyPoi", true) && willShowInThisMap,
-                CharacterType.Neutral => ModSettingManager.GetValue("showNeutralPoi", true) && willShowInThisMap,
+                CharacterType.Pet => ModSettingManager.GetValue(ModBehaviour.ModInfo, "showPetPoi", true),
+                CharacterType.Boss => ModSettingManager.GetValue(ModBehaviour.ModInfo, "showBossPoi", true) && willShowInThisMap,
+                CharacterType.Enemy => ModSettingManager.GetValue(ModBehaviour.ModInfo, "showEnemyPoi", true) && willShowInThisMap,
+                CharacterType.Neutral => ModSettingManager.GetValue(ModBehaviour.ModInfo, "showNeutralPoi", true) && willShowInThisMap,
                 _ => false,
             };
         }
