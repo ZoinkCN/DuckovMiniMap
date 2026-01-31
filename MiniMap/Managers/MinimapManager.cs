@@ -99,8 +99,21 @@ namespace MiniMap.Managers
         }
 
         private static void OnStartedLoadingScene(SceneLoadingContext obj)
-        {
-            ApplyConfigs();
+        {    
+			// ============ 直接在这里处理，不通过 ApplyConfigs ============
+			try
+			{
+				// 只更新位置、缩放、按键绑定
+				OnMinimapPositionChanged();
+				OnMinimapContainerScaleChanged();
+				UpdateInputBindings();
+                bool enabled = ModSettingManager.GetValue<bool>(ModBehaviour.ModInfo, "enableMiniMap");
+                isEnabled = enabled;
+                isToggled = enabled;
+				
+				// 不调用 OnEnabledChanged()
+			}
+			catch { }
         }
 
         private static void OnConfigChanged(ModInfo modInfo, string key, object? value)
