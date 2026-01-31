@@ -36,6 +36,7 @@ namespace MiniMap
             MiniMapCompassPatcher.Instance,
             MiniMapDisplayPatcher.Instance,
             MapMarkerManagerPatcher.Instance,
+            MiniMapDisplayEntryPatcher.Instance,
         };
 
         public bool PatchSingleExtender(Type targetType, Type extenderType, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
@@ -127,7 +128,6 @@ namespace MiniMap
         {
             try
             {
-                MinimapManager.Initialize();
                 ApplyHarmonyPatchers();
 				DeathEventHandler.Initialize(); // 初始化死亡事件处理器
                 LevelManager.OnEvacuated += OnEvacuated;
@@ -181,7 +181,8 @@ namespace MiniMap
         {
             Log.Info("$SettingManager初始化成功，开始创建UI");
             ModSettingManager.CreateUI(ModInfo);
-        }
+			MinimapManager.Initialize();
+		}
 
         void Update()
         {

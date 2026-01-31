@@ -11,6 +11,7 @@ using System;
 using System.Collections;
 using System.Threading;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -46,17 +47,13 @@ namespace MiniMap.Managers
         private static MiniMapDisplay? minimapDisplay;
         private static MiniMapDisplay? originalDisplay;
 
-        public static MiniMapDisplay? MinimapDisplay
-        {
-            get
-            {
-                return minimapDisplay;
-            }
-        }
+        public static MiniMapDisplay? MinimapDisplay => minimapDisplay;
         public static MiniMapDisplay? OriginalDisplay
         {
             get
             {
+                if (originalDisplay == null || originalDisplay.IsDestroyed())
+                    originalDisplay = GetOriginalDisplay();
                 return originalDisplay;
             }
         }
@@ -430,21 +427,6 @@ namespace MiniMap.Managers
         {
             try
             {
-                var displayEntries = minimapDisplay?.GetComponentsInChildren<MiniMapDisplayEntry>();
-                if (displayEntries == null)
-                {
-                    return;
-                }
-                foreach (var entry in displayEntries)
-                {
-                    GameObject entryObject = entry.gameObject;
-                    Image image = entryObject.GetComponent<Image>();
-                    if (image != null && (image.material == null || image.material.name == "MapSprite"))
-                    {
-                        image.material = default;
-                    }
-                }
-
                 if (!LevelManager.LevelInited)
                 {
                     return;
@@ -600,8 +582,7 @@ namespace MiniMap.Managers
         {
             try
             {
-                MiniMapDisplay? originalDisplay = GetOriginalDisplay();
-                if (originalDisplay == null)
+                if (OriginalDisplay == null)
                 {
                     Log.Error($"原始地图为空！");
                     return false;
@@ -612,8 +593,7 @@ namespace MiniMap.Managers
                     return false;
                 }
 
-                MinimapManager.originalDisplay = originalDisplay;
-                minimapObject = GameObject.Instantiate(originalDisplay.gameObject);
+                minimapObject = GameObject.Instantiate(OriginalDisplay.gameObject);
                 minimapDisplay = minimapObject.GetComponent<MiniMapDisplay>();
                 minimapDisplay.SetField("autoSetupOnEnable", true);
                 minimapDisplay.InvokeMethod("UnregisterEvents");
@@ -727,30 +707,45 @@ namespace MiniMap.Managers
         {
             try
             {
+
+
                 Key _toggleKey = ModSettingManager.GetValue<Key>(ModBehaviour.ModInfo, "MiniMapToggleKey");
+
                 // Key _toggleKey = Key.Digit9;
                 // Key _zoomInKey = Key.Equals;
                 // Key _zoomOutKey = Key.Minus;
 
                 // 切换小地图按键：默认 M 键
-                string ToggleKey = Keyboard.current[_toggleKey].path;
-                _toggleAction = new InputAction("ToggleMiniMap", InputActionType.Button, ToggleKey);
-                _toggleAction.performed += OnTogglePerformed;  // 按下时触发一次
-                _toggleAction.Enable();
+                Log.Debug($"_toggleKey: {_toggleKey}");
+                if (_toggleKey != Key.None)
+                {
+                    string ToggleKey = Keyboard.current[_toggleKey].path;
+                    _toggleAction = new InputAction("ToggleMiniMap", InputActionType.Button, ToggleKey);
+                    _toggleAction.performed += OnTogglePerformed;  // 按下时触发一次
+                    _toggleAction.Enable();
+                }
 
                 // 放大按键：默认 = 键
-                string ZoomInKey = Keyboard.current[_zoomInKey].path;
-                _zoomInAction = new InputAction("ZoomInMiniMap", InputActionType.Button, ZoomInKey);
-                _zoomInAction.started += OnZoomInStarted;      // 按键按下开始
-                _zoomInAction.canceled += OnZoomInCanceled;   // 按键释放
-                _zoomInAction.Enable();
+                Log.Debug($"_zoomInKey: {_zoomInKey}");
+                if (_zoomInKey != Key.None)
+                {
+                    string ZoomInKey = Keyboard.current[_zoomInKey].path;
+                    _zoomInAction = new InputAction("ZoomInMiniMap", InputActionType.Button, ZoomInKey);
+                    _zoomInAction.started += OnZoomInStarted;      // 按键按下开始
+                    _zoomInAction.canceled += OnZoomInCanceled;   // 按键释放
+                    _zoomInAction.Enable();
+                }
 
                 // 缩小按键：默认 - 键
-                string ZoomOutKey = Keyboard.current[_zoomOutKey].path;
-                _zoomOutAction = new InputAction("ZoomOutMiniMap", InputActionType.Button, ZoomOutKey);
-                _zoomOutAction.started += OnZoomOutStarted;    // 按键按下开始
-                _zoomOutAction.canceled += OnZoomOutCanceled; // 按键释放
-                _zoomOutAction.Enable();
+                Log.Debug($"_zoomOutKey: {_zoomOutKey}");
+                if (_zoomOutKey != Key.None)
+                {
+                    string ZoomOutKey = Keyboard.current[_zoomOutKey].path;
+                    _zoomOutAction = new InputAction("ZoomOutMiniMap", InputActionType.Button, ZoomOutKey);
+                    _zoomOutAction.started += OnZoomOutStarted;    // 按键按下开始
+                    _zoomOutAction.canceled += OnZoomOutCanceled; // 按键释放
+                    _zoomOutAction.Enable();
+                }
             }
             catch (Exception e)
             {

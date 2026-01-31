@@ -83,6 +83,15 @@ namespace ZoinkModdingLibrary.ModSettings
             };
         }
 
+        private static Action<TValue> GetAction<TValue, TConvert>(ModInfo modInfo, string key)
+        {
+            return (v) =>
+            {
+                SaveValue(modInfo, key, Convert.ChangeType(v, typeof(TConvert)));
+                ConfigChanged?.Invoke(modInfo, key, v);
+            };
+        }
+
         private static void SetUI(ModInfo modInfo, string key, JToken? value, string type)
         {
             if (value == null)
@@ -204,14 +213,17 @@ namespace ZoinkModdingLibrary.ModSettings
                         modBehaviour.InvokeMethod("AddToggle", parameters: parameters.ToArray());
                         return;
                     case "keyBinding":
-                        // 先尝试解析为 Key（新 Input System）
                         string? valueString = value?.ToString();
                         Key keyValue;
-                        if (!Enum.TryParse(valueString, true, out keyValue)) { keyValue = Key.None; }
+                        if (!Enum.TryParse(valueString, true, out keyValue))
+                        {
+                            keyValue = ConvertToKey(valueString);
+                            SaveValue(modInfo, option.Key, keyValue.ToString());
+                        }
                         string? defaultString = option.Value?["default"]?.ToString();
                         Key defaultKey;
-                        if (!Enum.TryParse(defaultString, true, out defaultKey)) { defaultKey = Key.None; }
-                        parameters.AddRange(new object?[] { keyValue, defaultKey, GetAction<Key>(modInfo, option.Key) });
+                        if (!Enum.TryParse(defaultString, true, out defaultKey)) { defaultKey = ConvertToKey(defaultString); }
+                        parameters.AddRange(new object?[] { keyValue, defaultKey, GetAction<Key, string>(modInfo, option.Key) });
                         modBehaviour.InvokeMethod("AddKeybindingWithKey", parameters: parameters.ToArray());
                         return;
                     case "dropdownList":
@@ -254,6 +266,19 @@ namespace ZoinkModdingLibrary.ModSettings
             }
         }
 
+        private static Key ConvertToKey(string? keyCode)
+        {
+            if (string.IsNullOrEmpty(keyCode)) return Key.None;
+            keyCode = keyCode == "Return" ? "Enter" : keyCode;
+            keyCode = keyCode == "Menu" ? "ContextMenu" : keyCode;
+            keyCode = keyCode
+                .Replace("Alpha", "Digit")
+                .Replace("Control", "Ctrl")
+                .Replace("Keypad", "Numpad");
+            Enum.TryParse(keyCode, out Key result);
+            return result;
+        }
+
         private static void SaveValue(ModInfo modInfo, JObject config, string key, object? value)
         {
             config[key] = value == null ? JValue.CreateNull() : JToken.FromObject(value);
@@ -274,7 +299,7 @@ namespace ZoinkModdingLibrary.ModSettings
             JToken? token = modConfigs.Value.Config[key];
             if (token == null)
                 return failBack;
-            return token.ToObject<T>();
+            return token.ToObject<T>() ?? default;
         }
 
         public static JObject? GetTemplate(string key, JObject? templates)

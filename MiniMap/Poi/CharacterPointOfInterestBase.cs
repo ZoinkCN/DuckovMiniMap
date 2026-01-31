@@ -174,7 +174,7 @@ namespace MiniMap.Poi
 		}
 		// ============ 修改结束 ============
 
-        private void OnConfigChanged(ModInfo modInfo,string key, object? value)
+        private void OnConfigChanged(ModInfo modInfo, string key, object? value)
         {
             if (!modInfo.ModIdEquals(ModBehaviour.Instance!.info)) return;
             if (value == null) return;
@@ -229,7 +229,7 @@ namespace MiniMap.Poi
 
         public virtual bool WillShow(bool isOriginalMap = true)
         {
-            bool willShowInThisMap = isOriginalMap ? ModSettingManager.GetValue(ModBehaviour.ModInfo, "showPoiInMap", true) : ModSettingManager.GetValue(ModBehaviour.ModInfo, "showPoiInMiniMap", true);
+            bool willShowInThisMap = ModSettingManager.GetValue(ModBehaviour.ModInfo, isOriginalMap ? "showPoiInMap" : "showPoiInMiniMap", true);
             return characterType switch
             {
                 CharacterType.Main or CharacterType.NPC => true,
