@@ -21,6 +21,7 @@ namespace ZoinkModdingLibrary.ModSettings
         //public bool needUpdate = false;
 
         private static Type? modBehaviour;
+        private static bool isModActivateWatched = false;
 
         private static bool IsChinese => LocalizationManager.CurrentLanguage.ToString().Contains("Chinese");
         private static string DescKey => IsChinese ? "descCN" : "descEN";
@@ -32,11 +33,11 @@ namespace ZoinkModdingLibrary.ModSettings
         public static event Action<ModInfo, string>? ButtonClicked;
         public static event Action? Initialized;
 
-        private static Dictionary<string, (JObject? Template, JObject Config)> configs = new();
+        private static Dictionary<string, CachedSetting> configs = new();
 
-        private static (JObject? Template, JObject Config)? GetOrAddModConfig(ModInfo modInfo)
+        private static CachedSetting? GetOrAddModConfig(ModInfo modInfo)
         {
-            if (configs.TryGetValue(modInfo.GetModId(), out (JObject? Template, JObject Config) modConfigs))
+            if (configs.TryGetValue(modInfo.GetModId(), out CachedSetting modConfigs))
             {
                 return modConfigs;
             }
@@ -44,7 +45,7 @@ namespace ZoinkModdingLibrary.ModSettings
             {
                 JObject? templates = ModFileOperations.LoadConfig(modInfo, ModConfigTemplateFileName);
                 JObject config = ModFileOperations.LoadConfig(modInfo, ModConfigFileName) ?? new JObject();
-                modConfigs = (templates, config);
+                modConfigs = new CachedSetting(templates, config);
                 configs.Add(modInfo.GetModId(), modConfigs);
                 return modConfigs;
             }
@@ -52,20 +53,24 @@ namespace ZoinkModdingLibrary.ModSettings
 
         public static bool Initialize(Action? initialized = null)
         {
-            Initialized -= initialized;
-            Initialized += initialized;
             if (modBehaviour == null)
             {
+                Initialized += initialized;
                 modBehaviour = AssemblyOperations.FindTypeInAssemblies("ModSetting", "ModSetting.ModBehaviour");
                 if (modBehaviour == null)
                 {
-                    ModManager.OnModActivated += OnModActivated;
+                    if (!isModActivateWatched)
+                    {
+                        ModManager.OnModActivated += OnModActivated;
+                        isModActivateWatched = true;
+                    }
                     return false;
                 }
+                Initialized?.Invoke();
+                Initialized -= initialized;
             }
-            Initialized?.Invoke();
-            Initialized -= initialized;
             ModManager.OnModActivated -= OnModActivated;
+            isModActivateWatched = false;
             return true;
         }
 
@@ -79,6 +84,15 @@ namespace ZoinkModdingLibrary.ModSettings
             return (v) =>
             {
                 SaveValue(modInfo, key, v);
+                ConfigChanged?.Invoke(modInfo, key, v);
+            };
+        }
+
+        private static Action<TValue> GetAction<TValue, TConvert>(ModInfo modInfo, string key)
+        {
+            return (v) =>
+            {
+                SaveValue(modInfo, key, Convert.ChangeType(v, typeof(TConvert)));
                 ConfigChanged?.Invoke(modInfo, key, v);
             };
         }
@@ -124,13 +138,25 @@ namespace ZoinkModdingLibrary.ModSettings
             try
             {
                 if (!isReset) Log.Info($"Start Create Setting UI");
-                var modConfigs = GetOrAddModConfig(modInfo);
-                if (modConfigs == null) return;
-                if (modConfigs.Value.Template == null || modBehaviour == null) return;
-                foreach (KeyValuePair<string, JToken?> option in modConfigs.Value.Template)
+                CachedSetting? modConfigs = GetOrAddModConfig(modInfo);
+                if (modConfigs == null)
                 {
-                    CreateOneOption(modInfo, modConfigs.Value.Config, option, isReset);
+                    Log.Error("ModSetting 未初始化");
+                    return;
                 }
+                if (modConfigs.IsUICreated && !isReset)
+                {
+                    Log.Error("ModSetting UI已创建!");
+                    return;
+                }
+                if (modConfigs.Template == null || modBehaviour == null) return;
+                JObject modSettings = new JObject();
+                foreach (KeyValuePair<string, JToken?> option in modConfigs.Template)
+                {
+                    CreateOneOption(modInfo, modSettings, modConfigs.Config, option, isReset);
+                }
+                modConfigs.Config = modSettings;
+                modConfigs.IsUICreated = true;
                 if (!isReset) Log.Info($"Setting UI Created");
                 ConfigLoaded?.Invoke();
             }
@@ -140,7 +166,7 @@ namespace ZoinkModdingLibrary.ModSettings
             }
         }
 
-        private static void CreateOneOption(ModInfo modInfo, JObject modSettings, KeyValuePair<string, JToken?> option, bool isReset = false)
+        private static void CreateOneOption(ModInfo modInfo, JObject modSettings, JObject savedSettings, KeyValuePair<string, JToken?> option, bool isReset = false)
         {
             try
             {
@@ -156,8 +182,14 @@ namespace ZoinkModdingLibrary.ModSettings
                 if (type != "group")
                 {
                     if (!isReset)
-                        value = modSettings[option.Key];
+                        value = savedSettings[option.Key];
                     value ??= option.Value?["default"];
+                    if(value == null)
+                    {
+                        Log.Error($"{option.Key} 无有效值!");
+                        return;
+                    }
+                    modSettings[option.Key] = value;
                     if (isReset)
                     {
                         SetUI(modInfo, option.Key, value, type);
@@ -175,7 +207,7 @@ namespace ZoinkModdingLibrary.ModSettings
                         List<string> keys = new List<string>();
                         foreach (KeyValuePair<string, JToken?> config in configsObj)
                         {
-                            CreateOneOption(modInfo, modSettings, config, isReset);
+                            CreateOneOption(modInfo, modSettings, savedSettings, config, isReset);
                             keys.Add(config.Key);
                         }
                         if (isReset) return;
@@ -204,14 +236,17 @@ namespace ZoinkModdingLibrary.ModSettings
                         modBehaviour.InvokeMethod("AddToggle", parameters: parameters.ToArray());
                         return;
                     case "keyBinding":
-                        // 先尝试解析为 Key（新 Input System）
                         string? valueString = value?.ToString();
                         Key keyValue;
-                        if (!Enum.TryParse(valueString, true, out keyValue)) { keyValue = Key.None; }
+                        if (!Enum.TryParse(valueString, true, out keyValue))
+                        {
+                            keyValue = ConvertToKey(valueString);
+                            SaveValue(modInfo, option.Key, keyValue.ToString());
+                        }
                         string? defaultString = option.Value?["default"]?.ToString();
                         Key defaultKey;
-                        if (!Enum.TryParse(defaultString, true, out defaultKey)) { defaultKey = Key.None; }
-                        parameters.AddRange(new object?[] { keyValue, defaultKey, GetAction<Key>(modInfo, option.Key) });
+                        if (!Enum.TryParse(defaultString, true, out defaultKey)) { defaultKey = ConvertToKey(defaultString); }
+                        parameters.AddRange(new object?[] { keyValue, defaultKey, GetAction<Key, string>(modInfo, option.Key) });
                         modBehaviour.InvokeMethod("AddKeybindingWithKey", parameters: parameters.ToArray());
                         return;
                     case "dropdownList":
@@ -254,6 +289,19 @@ namespace ZoinkModdingLibrary.ModSettings
             }
         }
 
+        private static Key ConvertToKey(string? keyCode)
+        {
+            if (string.IsNullOrEmpty(keyCode)) return Key.None;
+            keyCode = keyCode == "Return" ? "Enter" : keyCode;
+            keyCode = keyCode == "Menu" ? "ContextMenu" : keyCode;
+            keyCode = keyCode
+                .Replace("Alpha", "Digit")
+                .Replace("Control", "Ctrl")
+                .Replace("Keypad", "Numpad");
+            Enum.TryParse(keyCode, out Key result);
+            return result;
+        }
+
         private static void SaveValue(ModInfo modInfo, JObject config, string key, object? value)
         {
             config[key] = value == null ? JValue.CreateNull() : JToken.FromObject(value);
@@ -264,17 +312,17 @@ namespace ZoinkModdingLibrary.ModSettings
         {
             var modConfigs = GetOrAddModConfig(modInfo);
             if (modConfigs == null) return;
-            SaveValue(modInfo, modConfigs.Value.Config, key, value);
+            SaveValue(modInfo, modConfigs.Config, key, value);
         }
 
         public static T? GetValue<T>(ModInfo modInfo, string key, T? failBack = default)
         {
             var modConfigs = GetOrAddModConfig(modInfo);
             if (modConfigs == null) return failBack;
-            JToken? token = modConfigs.Value.Config[key];
+            JToken? token = modConfigs.Config[key];
             if (token == null)
                 return failBack;
-            return token.ToObject<T>();
+            return token.ToObject<T>() ?? default;
         }
 
         public static JObject? GetTemplate(string key, JObject? templates)
@@ -306,7 +354,7 @@ namespace ZoinkModdingLibrary.ModSettings
             var modConfigs = GetOrAddModConfig(modInfo);
             if (modConfigs == null) return string.Empty;
             int index = GetValue(modInfo, key, 0);
-            JObject? template = GetTemplate(key, modConfigs.Value.Template);
+            JObject? template = GetTemplate(key, modConfigs.Template);
             List<string>? options = (template?[isChinese ? "optionsCN" : "optionsEN"] as JArray)?.ToList<string>();
             if (options == null)
             {
