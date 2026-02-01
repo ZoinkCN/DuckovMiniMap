@@ -115,7 +115,7 @@ namespace MiniMap.Patchers
 								___displayName.gameObject.SetActive(shouldShowName);
 								if (shouldShowName)
 								{
-									___displayName.transform.localScale = Vector3.one * (MiniMapCommon.CascadeScalingUnits * 0.8f);
+									___displayName.transform.localScale = Vector3.one * (MiniMapCommon.CascadeScalingUnits * 1f);
 								}
 							}
 							
