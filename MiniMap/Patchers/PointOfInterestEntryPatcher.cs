@@ -30,11 +30,6 @@ namespace MiniMap.Patchers
                 __instance.gameObject.SetActive(false);
                 return false;
             }
-            //if (___master == MinimapManager.DuplicatedMinimapDisplay && !(__instance.Target?.gameObject.activeInHierarchy ?? false))
-            //{
-            //    return false;
-            //}
-            //lastUpdateTime = Time.time;
             if (__instance.Target is IPointOfInterest poi)
             {
                 if (poi.Color != ___icon.color)
