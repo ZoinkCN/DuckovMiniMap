@@ -32,6 +32,8 @@ namespace MiniMap.Poi
         private float scaleFactor = 1f;
         private bool hideIcon = false;
         private string? overrideSceneID;
+        
+
 
         public virtual bool Initialized => initialized;
         public virtual CharacterMainControl? Character => character;
@@ -60,6 +62,7 @@ namespace MiniMap.Poi
         public virtual float ShadowDistance { get => shadowDistance; set => shadowDistance = value; }
         public virtual bool Localized { get => localized; set => localized = value; }
         public virtual Sprite? Icon => icon;
+        
         public virtual int OverrideScene
         {
             get
@@ -104,6 +107,11 @@ namespace MiniMap.Poi
             this.followActiveScene = followActiveScene;
             this.overrideSceneID = overrideSceneID;
             ShowOnlyActivated = ModSettingManager.GetValue(ModBehaviour.ModInfo, "showOnlyActivated", false);
+
+            // ============ 修改：根据敌人类型设置图标大小 ============
+            SetIconSizeFactorByCharacterType(characterType);
+			// ============ 修改结束 ============
+            
             ModSettingManager.ConfigChanged += OnConfigChanged;
             initialized = true;
         }
@@ -114,8 +122,12 @@ namespace MiniMap.Poi
             this.character = character;
             this.characterType = characterType;
             this.icon = GameObject.Instantiate(poi.Icon);
-            FieldInfo? field = typeof(SimplePointOfInterest).GetField("displayName", BindingFlags.NonPublic | BindingFlags.Instance);
-            this.cachedName = field.GetValue(poi) as string;
+			// ============ 修改：直接访问公共属性 ============
+			// FieldInfo? field = typeof(SimplePointOfInterest).GetField("displayName", BindingFlags.NonPublic | BindingFlags.Instance);
+			// this.cachedName = field.GetValue(poi) as string;
+			
+			this.cachedName = poi.DisplayName;  // ← 直接访问！
+			// ============ 修改结束 ============
             this.followActiveScene = followActiveScene;
             this.overrideSceneID = overrideSceneID;
             this.isArea = poi.IsArea;
@@ -124,9 +136,47 @@ namespace MiniMap.Poi
             this.shadowColor = poi.ShadowColor;
             this.shadowDistance = poi.ShadowDistance;
             ShowOnlyActivated = ModSettingManager.GetValue(ModBehaviour.ModInfo, "showOnlyActivated", false);
+
+            // ============ 修改：根据敌人类型设置图标大小 ============
+            SetIconSizeFactorByCharacterType(characterType);
+			// ============ 修改结束 ============
+            
             ModSettingManager.ConfigChanged += OnConfigChanged;
             initialized = true;
         }
+        
+        // ============ 修改：返回图标大小因子 ============
+        private float IconSizeFactor = 1f;
+        public virtual float IconSize => ScaleFactor * IconSizeFactor;
+        // ============ 修改结束 ============
+		
+		// ============ 修改：根据敌人类型设置图标大小 ============
+		private void SetIconSizeFactorByCharacterType(CharacterType characterType)
+		{
+			switch (characterType)
+			{
+				// case CharacterType.Enemy:
+				// case CharacterType.NPC:
+				// case CharacterType.Neutral:
+					// // 普通敌人、NPC、中立单位共用同一个大小设置
+					// IconSizeFactor = 1.0f;
+					// break;
+				// case CharacterType.Boss:
+					// IconSizeFactor = 1.2f;
+					// break;
+				case CharacterType.Pet:
+					IconSizeFactor = 1.6f;
+					break;
+				// case CharacterType.Main:
+					// // 玩家自己（中心图标）使用专门的小地图中心图标大小
+					// IconSizeFactor = 1.0f;
+					// break;
+				// default:
+					// IconSizeFactor = 1.0f;
+					// break;
+			}
+		}
+		// ============ 修改结束 ============
 
         private void OnConfigChanged(ModInfo modInfo, string key, object? value)
         {
@@ -153,13 +203,10 @@ namespace MiniMap.Poi
             }
         }
 
+        // 移除死亡检查，只保留空Update方法用于子类扩展
         protected virtual void Update()
         {
-            if (character != null && characterType != CharacterType.Main && PoiCommon.IsDead(character))
-            {
-                Destroy(this.gameObject);
-                return;
-            }
+            // 不再进行死亡检查，由事件驱动处理
         }
 
         protected void OnDestroy()

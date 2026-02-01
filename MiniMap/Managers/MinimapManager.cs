@@ -36,7 +36,7 @@ namespace MiniMap.Managers
         private static float northFontSize = 18f;
 
         public static float MapBorderEulerZRotation = 0f;
-        public static Vector2 displayZoomRange = new Vector2(0.1f, 30f);
+        public static Vector2 displayZoomRange = new Vector2(0.25f, 4f);
         public static Color backgroundColor = new Color(0.1f, 0.1f, 0.1f, 0.8f);
         public static GameObject? miniMapScaleContainer;
 
@@ -99,8 +99,21 @@ namespace MiniMap.Managers
         }
 
         private static void OnStartedLoadingScene(SceneLoadingContext obj)
-        {
-            ApplyConfigs();
+        {    
+			// ============ 直接在这里处理，不通过 ApplyConfigs ============
+			try
+			{
+				// 只更新位置、缩放、按键绑定
+				OnMinimapPositionChanged();
+				OnMinimapContainerScaleChanged();
+				UpdateInputBindings();
+                bool enabled = ModSettingManager.GetValue<bool>(ModBehaviour.ModInfo, "enableMiniMap");
+                isEnabled = enabled;
+                isToggled = enabled;
+				
+				// 不调用 OnEnabledChanged()
+			}
+			catch { }
         }
 
         private static void OnConfigChanged(ModInfo modInfo, string key, object? value)
@@ -862,7 +875,7 @@ namespace MiniMap.Managers
                     }
                     await UniTask.SwitchToMainThread(); // 回到主线程
                     DisplayZoom(direction);  // 执行节流缩放
-                    await UniTask.Delay(75, DelayType.Realtime, PlayerLoopTiming.Update, token);
+                    await UniTask.Delay(20, DelayType.Realtime, PlayerLoopTiming.Update, token);
                 }
             }
             catch (OperationCanceledException)

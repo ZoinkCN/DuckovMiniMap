@@ -22,86 +22,165 @@ namespace MiniMap.Patchers
         public static new PatcherBase Instance { get; } = new PointOfInterestEntryPatcher();
         private PointOfInterestEntryPatcher() { }
 
-        [MethodPatcher("UpdateScale", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        public static bool UpdateScalePrefix(
-            CharacterPoiEntry __instance,
-            MiniMapDisplay ___master,
-            IPointOfInterest ___pointOfInterest,
-            Transform ___iconContainer,
-            ProceduralImage ___areaDisplay,
-            float ___areaLineThickness
-        )
+[MethodPatcher("UpdateScale", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
+public static bool UpdateScalePrefix(
+    PointOfInterestEntry __instance,
+    MiniMapDisplay ___master,
+    IPointOfInterest ___pointOfInterest,
+    Transform ___iconContainer,
+    ProceduralImage ___areaDisplay,
+    float ___areaLineThickness,
+    TextMeshProUGUI ___displayName
+)
+{
+    try
+    {
+        if (___pointOfInterest == null) return true;
+		
+        bool isInMiniMap = ___master == MinimapManager.MinimapDisplay; // 判断当前显示的是系统地图还是Mod地图
+        bool isCharacterPoi = ___pointOfInterest is CharacterPoiBase;
+        
+        // 处理图标缩放
+        float d = ___pointOfInterest.ScaleFactor;
+        if (isCharacterPoi)
         {
-            try
+            CharacterPoiBase characterPoi = ___pointOfInterest as CharacterPoiBase;
+			if (characterPoi == null && !isInMiniMap) return true;
+            d = characterPoi?.IconSize ?? d;
+        }
+		
+        float displayZoomScale = ModSettingManager.GetValue(ModBehaviour.ModInfo, "displayZoomScale", 5f);
+		float CascadeScalingUnits = ModSettingManager.GetValue(ModBehaviour.ModInfo, "CascadeScalingUnits", 2.5f);
+
+        // 获取父对象缩放
+        float parentLocalScale = __instance.transform.parent.localScale.x;
+        var baseScale = Vector3.one * (d / parentLocalScale);
+        
+        // ============ 统一处理逻辑 ============
+        if (isInMiniMap) // 小地图
+        {
+            if (!isCharacterPoi) // 场景片区名字
             {
-                float d = ___pointOfInterest?.ScaleFactor ?? 1f;
-
-                // 判断当前显示的是系统地图还是Mod地图
-                bool isInMiniMap = ___master == MinimapManager.MinimapDisplay;
-
-                // 如果是CharacterPoiBase（包括位置图标和方向箭头）
-                if (___pointOfInterest is CharacterPoiBase characterPoi)
+                // 显示名称处理
+                bool shouldShowName = displayZoomScale >= 0.4f;
+                if (___displayName != null)
                 {
-                    // 判断是否是中心图标（玩家自己的图标）
-                    bool isCenterIcon = characterPoi.CharacterType == CharacterType.Main;
-                    if (isCenterIcon)
+                    ___displayName.gameObject.SetActive(shouldShowName);
+                    if (shouldShowName) // 场景片区名字
                     {
-                        // 中心图标：区分小地图和系统地图
-                        if (isInMiniMap)
-                        {
-                            // 在小地图中：使用 miniMapCenterIconSize 配置
-                            d = characterPoi.ScaleFactor * ModSettingManager.GetValue(ModBehaviour.ModInfo, "miniMapCenterIconSize", 1.0f);
-                        }
-                        else
-                        {
-                            // 在系统地图中：使用原始大小
-                            d = characterPoi.ScaleFactor;
-                        }
+                        ___displayName.transform.localScale = Vector3.one * (CascadeScalingUnits * 0.6f);
+                    }
+                }
+                
+                // 图标容器处理
+                if (___iconContainer != null)
+                {
+                    ___iconContainer.gameObject.SetActive(true);
+                    if (shouldShowName)  // 场景片区名
+                    {
+                        ___iconContainer.localScale = baseScale / CascadeScalingUnits;
                     }
                     else
                     {
-                        // 根据角色类型获取对应的图标大小配置
-                        float iconSizeFactor = 1.0f;
-                        switch (characterPoi.CharacterType)
-                        {
-                            case CharacterType.Pet:
-                                iconSizeFactor = ModSettingManager.GetValue(ModBehaviour.ModInfo, "petIconSize", 0.8f);
-                                break;
-                            case CharacterType.Boss:
-                                iconSizeFactor = ModSettingManager.GetValue(ModBehaviour.ModInfo, "bossIconSize", 1.2f);
-                                break;
-                            case CharacterType.Enemy:
-                            case CharacterType.NPC:
-                            case CharacterType.Neutral:
-                                iconSizeFactor = ModSettingManager.GetValue(ModBehaviour.ModInfo, "enemyIconSize", 1.0f);
-                                break;
-                        }
-
-                        d = characterPoi.ScaleFactor * iconSizeFactor;
+                        ___iconContainer.localScale = baseScale / (CascadeScalingUnits * 0.8f);
                     }
                 }
-
-                // ============ 应用小地图全局调节因子 ============
-                if (isInMiniMap)
+            }
+            else // 角色POI
+            {
+                CharacterPoiBase characterPoi = ___pointOfInterest as CharacterPoiBase;
+                if (characterPoi != null && ___iconContainer != null && ___displayName != null)
                 {
-                    // 只在小地图中应用全局调节因子
-                    float globalFactor = ModSettingManager.GetValue(ModBehaviour.ModInfo, "miniMapGlobalSize", 1.0f);
-                    d *= globalFactor;
+                    CharacterType type = characterPoi.CharacterType;
+                    bool isCenterIcon = characterPoi.CharacterType == CharacterType.Main;
+                    
+                    // 图标容器显示/隐藏
+                    if (type == CharacterType.Enemy || type == CharacterType.NPC || type == CharacterType.Neutral)
+                    {
+                        ___iconContainer.gameObject.SetActive(displayZoomScale >= 0.8f);
+                    }
+                    else
+                    {
+                        ___iconContainer.gameObject.SetActive(true);
+                    }
+                    
+                    // 显示名称处理
+                    if (isCenterIcon)
+                    {
+                        ___displayName.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        bool shouldShowName = displayZoomScale >= 1.5f;
+                        ___displayName.gameObject.SetActive(shouldShowName);
+                        if (shouldShowName)
+                        {
+                            ___displayName.transform.localScale = Vector3.one * (CascadeScalingUnits * 0.8f);
+                        }
+                    }
+                    
+                    // 图标缩放
+                    ___iconContainer.localScale = baseScale;
                 }
-                // ============ 应用结束 ============
-
-                float parentLocalScale = __instance.GetProperty<float>("ParentLocalScale");
-                int iconScaleType = ModSettingManager.GetValue(ModBehaviour.ModInfo, "iconScaleType", 0);
-                var baseScale = Vector3.one * d / parentLocalScale;
-
-                // 应用缩放
-                ___iconContainer.localScale = baseScale;
-
-                if (___pointOfInterest != null && ___pointOfInterest.IsArea)
+            }
+        }
+        else // 大地图
+        {
+            if (!isCharacterPoi) // 场景片区名字
+            {
+                if (___displayName != null)
                 {
-                    ___areaDisplay.BorderWidth = ___areaLineThickness / parentLocalScale;
-                    ___areaDisplay.FalloffDistance = 1f / parentLocalScale;
+                    ___displayName.gameObject.SetActive(true);
+                    ___displayName.transform.localScale = Vector3.one;
                 }
+                if (___iconContainer != null)
+                {
+                    ___iconContainer.gameObject.SetActive(true);
+                    ___iconContainer.localScale = baseScale;
+                }
+            }
+            else // 角色POI
+            {
+                CharacterPoiBase characterPoi = ___pointOfInterest as CharacterPoiBase;
+                if (characterPoi != null && ___iconContainer != null && ___displayName != null)
+                {
+                    bool isCenterIcon = characterPoi.CharacterType == CharacterType.Main;
+                    
+                    // 显示名称处理
+                    if (isCenterIcon)
+                    {
+                        ___displayName.gameObject.SetActive(true);
+                        ___displayName.transform.localScale = Vector3.one;
+                    }
+                    else
+                    {
+                        ___displayName.gameObject.SetActive(true);
+                        ___displayName.transform.localScale = Vector3.one * (CascadeScalingUnits * 0.8f);
+                    }
+                    
+                    // 图标容器始终显示
+                    ___iconContainer.gameObject.SetActive(true);
+                    
+                    // 图标缩放（中心图标放大2.5倍）
+                    if (isCenterIcon)
+                    {
+                        ___iconContainer.localScale = baseScale * CascadeScalingUnits;
+                    }
+                    else
+                    {
+                        ___iconContainer.localScale = baseScale;
+                    }
+                }
+            }
+        }
+        // ============ 逻辑结束 ============
+        
+        // 处理区域显示
+        if (___pointOfInterest.IsArea)
+        {
+            ___areaDisplay.BorderWidth = ___areaLineThickness / parentLocalScale;
+            ___areaDisplay.FalloffDistance = 1f / parentLocalScale;
+        }
 
                 return false;
             }
@@ -144,7 +223,7 @@ namespace MiniMap.Patchers
                 __instance.gameObject.SetActive(false);
                 return false;
             }
-            //if (___master == CustomMinimapManager.DuplicatedMinimapDisplay && !(__instance.Target?.gameObject.activeInHierarchy ?? false))
+            //if (___master == MinimapManager.MinimapDisplay && !(__instance.Target?.gameObject.activeInHierarchy ?? false))
             //{
             //    return false;
             //}
