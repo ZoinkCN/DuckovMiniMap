@@ -68,12 +68,12 @@ namespace MiniMap.Patchers
 							
 							if (shouldShowName)
 							{
-								___displayName.transform.localScale = Vector3.one * (MiniMapCommon.CascadeScalingUnits * 0.6f);
-								___iconContainer.localScale = baseScale / MiniMapCommon.CascadeScalingUnits;
+								___displayName.transform.localScale = Vector3.one * (2.5f * 0.6f);
+								___iconContainer.localScale = baseScale / 2.5f;
 							}
 							else
 							{
-								___iconContainer.localScale = baseScale / (MiniMapCommon.CascadeScalingUnits * 0.8f);
+								___iconContainer.localScale = baseScale / (2.5f * 0.8f);
 							}
 							
 							if (__instance.Target.name == "PointOfInterest" || __instance.Target.name == "MapElement") //MapElement 撤离点   PointOfInterest 传送气泡
@@ -115,7 +115,7 @@ namespace MiniMap.Patchers
 								___displayName.gameObject.SetActive(shouldShowName);
 								if (shouldShowName)
 								{
-									___displayName.transform.localScale = Vector3.one * (MiniMapCommon.CascadeScalingUnits * 1f);
+									___displayName.transform.localScale = Vector3.one * MiniMapCommon.CascadeScalingUnits;
 								}
 							}
 							
