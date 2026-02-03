@@ -79,7 +79,7 @@ namespace MiniMap.Managers
             ModSettingManager.ConfigChanged += OnConfigChanged;
             ModSettingManager.ButtonClicked += OnButtonClicked;
             SceneManager.sceneLoaded += OnSceneLoaded;
-            SceneLoader.onStartedLoadingScene += OnStartedLoadingScene;
+            SceneLoader.onFinishedLoadingScene += onFinishedLoadingScene;
 
             IsInitialized = true;
         }
@@ -93,12 +93,12 @@ namespace MiniMap.Managers
             ModSettingManager.ConfigChanged -= OnConfigChanged;
             ModSettingManager.ButtonClicked -= OnButtonClicked;
             SceneManager.sceneLoaded -= OnSceneLoaded;
-            SceneLoader.onStartedLoadingScene -= OnStartedLoadingScene;
+            SceneLoader.onFinishedLoadingScene -= onFinishedLoadingScene;
 
             IsInitialized = false;
         }
 
-        private static void OnStartedLoadingScene(SceneLoadingContext obj)
+        private static void onFinishedLoadingScene(SceneLoadingContext context)
         {    
 			// ============ 直接在这里处理，不通过 ApplyConfigs ============
 			try
@@ -114,6 +114,10 @@ namespace MiniMap.Managers
 				// 不调用 OnEnabledChanged()
 			}
 			catch { }
+			
+            if (string.IsNullOrEmpty(context.sceneName)) return;
+            // 预加载场景中心点（触发缓存填充）
+            Duckov.MiniMaps.UI.CharacterPoiEntry.GetSceneCenterFromSettings(context.sceneName);
         }
 
         private static void OnConfigChanged(ModInfo modInfo, string key, object? value)

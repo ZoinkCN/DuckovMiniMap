@@ -138,7 +138,7 @@ namespace MiniMap
                 //SceneLoader.onFinishedLoadingScene += PoiManager.OnFinishedLoadingScene;
                 //LevelManager.OnAfterLevelInitialized += PoiManager.OnLenvelIntialized;
                 //SceneLoader.onStartedLoadingScene += onStartedLoadingScene;  // 场景加载流程开始时，在显示加载界面之前
-                SceneLoader.onFinishedLoadingScene += onFinishedLoadingScene;  // 场景已经加载完成（资源加载完毕），但还没有被设置为活动场景之前
+                //SceneLoader.onFinishedLoadingScene += onFinishedLoadingScene;  // 场景已经加载完成（资源加载完毕），但还没有被设置为活动场景之前
                 //SceneLoader.onBeforeSetSceneActive += OnBeforeSetSceneActive;  // 新场景已经被设置为活动场景，初始化完成后
                 //SceneLoader.onAfterSceneInitialize += OnAfterSceneInitialize;  // 整个场景加载流程完全结束，包括所有过渡动画完成后
 
@@ -164,7 +164,7 @@ namespace MiniMap
                 
                 //SceneLoader.onFinishedLoadingScene -= PoiManager.OnFinishedLoadingScene;
                 //LevelManager.OnAfterLevelInitialized -= PoiManager.OnLenvelIntialized;
-                SceneLoader.onStartedLoadingScene -= onFinishedLoadingScene;
+                //SceneLoader.onStartedLoadingScene -= onFinishedLoadingScene;
                 MinimapManager.Destroy();
                 Log.Info($"disable mod {MOD_NAME}");
             }
@@ -200,14 +200,6 @@ namespace MiniMap
             {
                 Log.Error($"更新失败: {e}");
             }
-        }
-        
-        private static void onFinishedLoadingScene(SceneLoadingContext context)
-        {
-            if (string.IsNullOrEmpty(context.sceneName)) return;
-                
-            // 预加载场景中心点（触发缓存填充）
-            Duckov.MiniMaps.UI.CharacterPoiEntry.GetSceneCenterFromSettings(context.sceneName);
         }
     }
 }
