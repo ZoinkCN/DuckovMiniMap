@@ -51,6 +51,7 @@ namespace MiniMap.Managers
 		
 		private static float lastNonBaseZoom = 1f; // 保存上次非Base场景的缩放值
 		private static bool isInBaseScene = false; // 标记是否在Base场景
+		public static float CurrentMapWorldSize { get; private set; } = 1000f; // 默认1000米 添加字段记录当前地图尺寸
 
         public static MiniMapDisplay? MinimapDisplay => minimapDisplay;
         public static MiniMapDisplay? OriginalDisplay
@@ -164,6 +165,8 @@ private static void HandleBaseScene()
 
 private static void HandleNonBaseScene(MiniMapSettings.MapEntry map, string mapSceneID)
 {
+	CurrentMapWorldSize = map.imageWorldSize; // 保存当前地图尺寸
+	
     // 非Base场景：正常计算缩放
     float minZoom = Mathf.Clamp(0.25f * (1000f / map.imageWorldSize), 0.25f, 4f);
     displayZoomRange = new Vector2(minZoom, 4f);
