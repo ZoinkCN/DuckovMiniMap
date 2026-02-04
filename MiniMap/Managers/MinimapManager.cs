@@ -48,6 +48,9 @@ namespace MiniMap.Managers
 
         private static MiniMapDisplay? minimapDisplay;
         private static MiniMapDisplay? originalDisplay;
+		
+		private static float lastNonBaseZoom = 1f; // 保存上次非Base场景的缩放值
+		private static bool isInBaseScene = false; // 标记是否在Base场景
 
         public static MiniMapDisplay? MinimapDisplay => minimapDisplay;
         public static MiniMapDisplay? OriginalDisplay
@@ -102,69 +105,99 @@ namespace MiniMap.Managers
             IsInitialized = false;
         }
 		
-		private static void OnAfterSceneInitialize(SceneLoadingContext context) //不要动测试必须是OnAfterSceneInitialize， MultiSceneCore.ActiveSubSceneID才生效
-		{
-			try
-			{
-				Log.Info($"调整缩放范围 - 主场景: {context.sceneName}");
-				
-				if (MiniMapSettings.Instance == null) 
-				{
-					Log.Warning("MiniMapSettings 未初始化");
-					return;
-				}
-				
-				// 使用活动子场景ID，而不是主场景ID
-				string mapSceneID = MultiSceneCore.ActiveSubSceneID;
-				
-				if (string.IsNullOrEmpty(mapSceneID))
-				{
-					Log.Warning("没有活动子场景ID");
-					displayZoomRange = new Vector2(0.25f, 4f);
-					return;
-				}
-				
-				Log.Info($"查找地图数据 - 子场景: {mapSceneID}");
-				
-				var map = MiniMapSettings.Instance.maps.FirstOrDefault(e => e.sceneID == mapSceneID);
-				
-				if (map != null && map.imageWorldSize > 0)
-				{
-					float minZoom = Mathf.Clamp(0.25f * (1000f / map.imageWorldSize), 0.25f, 4f); // 限制在0.25-4倍
-					displayZoomRange = new Vector2(minZoom, 4F);
-					Log.Info($"成功: {map.sceneID} = {map.imageWorldSize:F0}米 -> 缩放: {minZoom:F2}x-4");
-				
-					AdjustCurrentZoomToRange(minZoom, 4f); // 调整当前缩放
-				}
-				else
-				{
-					Log.Warning($"未找到 {mapSceneID} 的地图配置");
-					displayZoomRange = new Vector2(0.25f, 4f);
-				}
-			}
-			catch (Exception e)
-			{
-				Log.Error($"错误: {e.Message}");
-				displayZoomRange = new Vector2(0.25f, 4f);
-			}
-		}
-		
-		private static void AdjustCurrentZoomToRange(float minZoom, float maxZoom)
-		{
-			try
-			{
-				float currentZoom = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale");
-				float clampedZoom = Mathf.Clamp(currentZoom, minZoom, maxZoom);
-				
-				if (Mathf.Abs(currentZoom - clampedZoom) > 0.01f)
-				{
-					ModSettingManager.SaveValue(ModBehaviour.ModInfo, "displayZoomScale", clampedZoom);
-					UpdateDisplayZoom();
-					Log.Info($"缩放调整: {currentZoom:F2}x → {clampedZoom:F2}x");
-				}
-			}
-			catch { }
-		}
+private static void OnAfterSceneInitialize(SceneLoadingContext context)
+{
+    try
+    {
+        Log.Info($"调整缩放范围 - 当前场景: {context.sceneName}");
+        
+        if (MiniMapSettings.Instance == null) return;
+        
+        string mapSceneID = MultiSceneCore.ActiveSubSceneID;
+        if (string.IsNullOrEmpty(mapSceneID)) return;
+        
+        var map = MiniMapSettings.Instance.maps.FirstOrDefault(e => e.sceneID == mapSceneID);
+        if (map == null || map.imageWorldSize <= 0) return;
+        
+        // 判断当前场景
+        bool isBaseScene = context.sceneName == "Base";
+        
+        if (isBaseScene)
+        {
+            // Base场景处理
+            HandleBaseScene();
+        }
+        else
+        {
+            // 非Base场景处理
+            HandleNonBaseScene(map, mapSceneID);
+        }
+    }
+    catch (Exception e)
+    {
+        Log.Error($"错误: {e.Message}");
+    }
+}
+
+private static void HandleBaseScene()
+{
+    // Base场景：固定4倍缩放
+    displayZoomRange = new Vector2(4f, 4f);
+    
+    // 保存当前缩放到Mod设置（使用特殊键）
+    float currentZoom = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale");
+    
+    // 检查是否已经保存过（默认值设为-1表示没保存过）
+    float savedValue = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "savedZoomBeforeBase", -1f);
+    if (savedValue < 0)
+    {
+        ModSettingManager.SaveValue(ModBehaviour.ModInfo, "savedZoomBeforeBase", currentZoom);
+        Log.Info($"进入Base场景，保存缩放到设置: {currentZoom:F2}x");
+    }
+    
+    // 强制设置为4倍
+    ModSettingManager.SaveValue(ModBehaviour.ModInfo, "displayZoomScale", 4f);
+    UpdateDisplayZoom();
+    
+    Log.Info($"Base场景固定缩放: 4.00x");
+}
+
+private static void HandleNonBaseScene(MiniMapSettings.MapEntry map, string mapSceneID)
+{
+    // 非Base场景：正常计算缩放
+    float minZoom = Mathf.Clamp(0.25f * (1000f / map.imageWorldSize), 0.25f, 4f);
+    displayZoomRange = new Vector2(minZoom, 4f);
+    
+    // 检查是否有保存的缩放值（默认值-1表示没有保存过）
+    float savedZoom = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "savedZoomBeforeBase", -1f);
+    float targetZoom;
+    
+    if (savedZoom >= 0)
+    {
+        // 使用保存的缩放值，并清除保存
+        targetZoom = savedZoom;
+        ModSettingManager.SaveValue(ModBehaviour.ModInfo, "savedZoomBeforeBase", -1f);
+        Log.Info($"使用保存的缩放: {targetZoom:F2}x");
+    }
+    else
+    {
+        // 使用当前的缩放值
+        targetZoom = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale");
+    }
+    
+    // 调整到范围内
+    float clampedZoom = Mathf.Clamp(targetZoom, minZoom, 4f);
+    
+    if (Mathf.Abs(targetZoom - clampedZoom) > 0.01f)
+    {
+        Log.Info($"缩放调整: {targetZoom:F2}x → {clampedZoom:F2}x");
+    }
+    
+    ModSettingManager.SaveValue(ModBehaviour.ModInfo, "displayZoomScale", clampedZoom);
+    UpdateDisplayZoom();
+    
+    Log.Info($"非Base场景: {map.sceneID}, 尺寸: {map.imageWorldSize:F0}米, 缩放: {clampedZoom:F2}x");
+}
 
         private static void onFinishedLoadingScene(SceneLoadingContext context)
         {    
